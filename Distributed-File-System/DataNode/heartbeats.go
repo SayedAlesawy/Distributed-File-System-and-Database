@@ -7,7 +7,7 @@ import (
 )
 
 // SendHeartBeat A function to publish heartbeat signals
-func (dtHeartbeatNodeObj dtHeartbeatNode) SendHeartBeat() {
+func (dtHeartbeatNodeObj *dtHeartbeatNode) SendHeartBeat() {
 	defer dtHeartbeatNodeObj.publisherSocket.Close()
 
 	dtHeartbeatNodeObj.establishPublisherConnection()
