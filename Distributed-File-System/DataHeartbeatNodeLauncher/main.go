@@ -8,10 +8,12 @@ import (
 )
 
 func main() {
-	ip := "127.0.0.1"
-	port := ""
+	//Tracker data
 	trackerIP := "127.0.0.1"
 	trackerPort := "9092"
+
+	ip := "127.0.0.1"
+	port := ""
 	id := 1
 	heartbeatInterval := time.Second
 
@@ -25,7 +27,7 @@ func main() {
 
 	dtHeartbeatNodeObj := datanode.NewDtHeartbeatNode(dataNodeObj, heartbeatInterval)
 
-	log.Println("[Heartbeat Data Node]", "Successfully launched")
+	log.Println("[Heartbeat Data Node #]", id, "Successfully launched")
 
 	dtHeartbeatNodeObj.SendIP()
 
