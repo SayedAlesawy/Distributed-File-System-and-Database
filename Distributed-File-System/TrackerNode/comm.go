@@ -46,7 +46,7 @@ func (heartbeatTrackerNodeObj *heartbeatTrackerNode) updateSubscriberConnection(
 
 // disconnectSocket A function to disconnect a socket specified by an endpoint
 func (heartbeatTrackerNodeObj *heartbeatTrackerNode) disconnectSocket(ip string) {
-	heartbeatTrackerNodeObj.subscriberSocket.Disconnect(ip)
+	heartbeatTrackerNodeObj.subscriberSocket.Disconnect("tcp://" + ip)
 }
 
 // ScanIPs A function to cnstantly scan for incomding IPs of data heartbeat nodes
