@@ -18,24 +18,22 @@ func (clientObj *client) getSocket() {
 	clientObj.socket = socket
 }
 
-// establishConnection A function to establish communication with all Tracker ports
-func (clientObj *client) establishConnection() {
+// EstablishConnection A function to establish communication with all Tracker ports
+func (clientObj *client) EstablishConnection() {
 	clientObj.getSocket()
 
 	for _, port := range clientObj.trackerPorts {
 		connectionString := "tcp://" + clientObj.trackerIP + ":" + port
 
 		clientObj.socket.Connect(connectionString)
+
+		log.Println("[Client]", "Connected to Tracker with port = ", port)
 	}
 }
 
 // SendRequest A function to send a request to Tracker
 func (clientObj *client) SendRequest(request Request) {
-	defer clientObj.socket.Close()
-
-	clientObj.establishConnection()
-
-	serializedRequest := serializeRequest(request)
+	serializedRequest := SerializeRequest(request)
 
 	acknowledge := ""
 
@@ -52,4 +50,8 @@ func (clientObj *client) SendRequest(request Request) {
 	}
 
 	log.Printf("[Client #%d] Successfully sent request to Tracker\n", clientObj.id)
+}
+
+func (clientObj *client) CloseConnection() {
+	clientObj.socket.Close()
 }

@@ -1,19 +1,21 @@
 package client
 
 import (
+	"log"
 	"strconv"
 	"strings"
 )
 
-// serializeRequest A function to serialize a request structure
-func serializeRequest(request Request) string {
+// SerializeRequest A function to serialize a request structure
+func SerializeRequest(request Request) string {
 	serializedRequest := strconv.Itoa(request.ID) + " " + strconv.Itoa(request.ClientID) + " " +
 		request.ClientIP + " " + request.ClientPort + " " + string(request.Type) + " " + request.FileName
 
 	return serializedRequest
 }
 
-func deserializeRequest(serializedRequest string) Request {
+// DeserializeRequest A function to deserialize a request structure
+func DeserializeRequest(serializedRequest string) Request {
 	fields := strings.Fields(serializedRequest)
 	requestID, _ := strconv.Atoi(fields[0])
 	clientID, _ := strconv.Atoi(fields[1])
@@ -28,4 +30,16 @@ func deserializeRequest(serializedRequest string) Request {
 	}
 
 	return requestObj
+}
+
+// PrintRequest A function to print a request
+func PrintRequest(request Request) {
+	log.Println("Request info:")
+	log.Println("ID = ", request.ID)
+	log.Println("ClientID = ", request.ClientID)
+	log.Println("ClientPort = ", request.ClientPort)
+	log.Println("Type = ", string(request.Type))
+	log.Println("FileName = ", request.FileName)
+	log.Println()
+	log.Println()
 }

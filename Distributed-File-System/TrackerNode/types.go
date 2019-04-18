@@ -8,6 +8,7 @@ import (
 
 // trackerNode A struct to represent the basic structure of a Tracker Node
 type trackerNode struct {
+	id   int    //ID of the tracker process
 	ip   string //The IP of the Tracker machine
 	port string //The port of the Tracker machine
 }
@@ -23,8 +24,9 @@ type heartbeatTrackerNode struct {
 }
 
 //NewTrackerNode A constructor function for the trackerNode type
-func NewTrackerNode(_ip string, _port string) trackerNode {
+func NewTrackerNode(_id int, _ip string, _port string) trackerNode {
 	trackerNodeObj := trackerNode{
+		id:   _id,
 		ip:   _ip,
 		port: _port,
 	}

@@ -9,9 +9,11 @@ import (
 
 func main() {
 	ip := "127.0.0.1"
-	port := "9092"
+	id := 0
+	heartbeatPort := "9092"
+
 	disconnectionThreshold := time.Duration(2000000001)
-	trackerNodeObj := trackernode.NewTrackerNode(ip, port)
+	trackerNodeObj := trackernode.NewTrackerNode(id, ip, heartbeatPort)
 
 	trackerHeartbeatNodeObj := trackernode.NewHeartbeatTrackerNode(trackerNodeObj, disconnectionThreshold)
 
