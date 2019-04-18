@@ -2,6 +2,10 @@ package trackernode
 
 import (
 	"log"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
 
 	"github.com/pebbe/zmq4"
 )
@@ -15,8 +19,9 @@ type trackerNode struct {
 // heartbeatTrackerNode A struct to represent a Tracker Node that listens to heartbeats
 //This struct extends the dataNode struct for added functionality
 type heartbeatTrackerNode struct {
-	subscriberSocket    *zmq4.Socket
-	dtHeartbeatNodesIPs []string
+	subscriberSocket   *zmq4.Socket //A susbscriber socket
+	datanodeIPs        map[int]string
+	datanodeTimeStamps map[int]time.Time
 	trackerNode
 }
 
@@ -35,6 +40,9 @@ func NewHeartbeatTrackerNode(_trackerNodeObj trackerNode) heartbeatTrackerNode {
 	heartbeatTrackerNodeObj := heartbeatTrackerNode{
 		trackerNode: _trackerNodeObj,
 	}
+
+	heartbeatTrackerNodeObj.datanodeIPs = make(map[int]string)
+	heartbeatTrackerNodeObj.datanodeTimeStamps = make(map[int]time.Time)
 
 	return heartbeatTrackerNodeObj
 }
@@ -61,38 +69,81 @@ func (heartbeatTrackerNodeObj *heartbeatTrackerNode) establishSubscriberConnecti
 }
 
 // updateSubscriberConnection A function to update the heartbeat susbcription list
-func (heartbeatTrackerNodeObj *heartbeatTrackerNode) updateSubscriberConnection() {
-	//log.Println("[Heartbeat Tracker Node]", "Called IP update routine")
+func (heartbeatTrackerNodeObj *heartbeatTrackerNode) updateSubscriberConnection(IPsMutex *sync.Mutex) {
+	IPsMutex.Lock()
 
-	for i := 0; i < len(heartbeatTrackerNodeObj.dtHeartbeatNodesIPs); i++ {
-		connectionString := "tcp://" + heartbeatTrackerNodeObj.dtHeartbeatNodesIPs[i]
-		//log.Println("Update", connectionString)
+	for _, ip := range heartbeatTrackerNodeObj.datanodeIPs {
+		connectionString := "tcp://" + ip
+
 		heartbeatTrackerNodeObj.subscriberSocket.Connect(connectionString)
 	}
+
+	IPsMutex.Unlock()
 }
 
 // ListenToHeartbeats A function to listen to incoming heartbeats
-func (heartbeatTrackerNodeObj *heartbeatTrackerNode) ListenToHeartbeats() {
+func (heartbeatTrackerNodeObj *heartbeatTrackerNode) ListenToHeartbeats(IPsMutex *sync.Mutex, timeStampsMutex *sync.Mutex) {
 	heartbeatTrackerNodeObj.establishSubscriberConnection()
 
 	defer heartbeatTrackerNodeObj.subscriberSocket.Close()
 
 	for {
-		//log.Println("[Heartbeat Tracker Node]", "Waiting for heartbeats")
-		heartbeatTrackerNodeObj.RecieveIP()
+		heartbeatTrackerNodeObj.updateSubscriberConnection(IPsMutex)
 
-		heartbeatTrackerNodeObj.updateSubscriberConnection()
-
-		heartbeat, _ := heartbeatTrackerNodeObj.subscriberSocket.Recv(0)
+		heartbeat, _ := heartbeatTrackerNodeObj.subscriberSocket.Recv(zmq4.DONTWAIT)
 
 		if heartbeat != "" {
 			log.Println("Received", heartbeat)
+
+			heartbeatTrackerNodeObj.registerTimeStap(heartbeat, timeStampsMutex)
 		}
+
+		//heartbeatTrackerNodeObj.printMap(m)
 	}
 }
 
-// RecieveIP A function to receive the IP of the heartbeat data node
-func (heartbeatTrackerNodeObj *heartbeatTrackerNode) RecieveIP() {
+// registerTimeStap A function to register the timestamp of the last received heartbeat
+func (heartbeatTrackerNodeObj *heartbeatTrackerNode) registerTimeStap(heartbeat string, timeStampMutex *sync.Mutex) {
+	id, _ := strconv.Atoi((strings.Fields(heartbeat))[1])
+
+	timeStampMutex.Lock()
+	heartbeatTrackerNodeObj.datanodeTimeStamps[id] = time.Now()
+	timeStampMutex.Unlock()
+}
+
+// updateDataNodeAliveStatus A function the update the status of the alive datanodes
+func (heartbeatTrackerNodeObj *heartbeatTrackerNode) UpdateDataNodeAliveStatus(IPsMutex *sync.Mutex, timeStampsMutex *sync.Mutex) {
+	for {
+		timeStampsMutex.Lock()
+
+		for id, timestamp := range heartbeatTrackerNodeObj.datanodeTimeStamps {
+			diff := time.Now().Sub(timestamp)
+			threshold := time.Duration(2000000001)
+
+			if diff > threshold {
+				log.Println("deleting node# ", id)
+				IPsMutex.Lock()
+				delete(heartbeatTrackerNodeObj.datanodeIPs, id)
+				IPsMutex.Unlock()
+
+				delete(heartbeatTrackerNodeObj.datanodeTimeStamps, id)
+			}
+		}
+
+		timeStampsMutex.Unlock()
+	}
+}
+
+func (heartbeatTrackerNodeObj heartbeatTrackerNode) printMap(IPsMutex *sync.Mutex) {
+	IPsMutex.Lock()
+	for id, ip := range heartbeatTrackerNodeObj.datanodeIPs {
+		log.Println("Tracking: ", id, " -- ", ip)
+	}
+	IPsMutex.Unlock()
+}
+
+// ScanIPs A function to cnstantly scan for incomding IPs of data heartbeat nodes
+func (heartbeatTrackerNodeObj *heartbeatTrackerNode) RecieveIP(IPsMutex *sync.Mutex, timeStampsMutex *sync.Mutex) {
 	socket, _ := zmq4.NewSocket(zmq4.REP)
 	defer socket.Close()
 
@@ -103,13 +154,25 @@ func (heartbeatTrackerNodeObj *heartbeatTrackerNode) RecieveIP() {
 	socket.Bind(connectionString)
 	acknowledge := "ACK"
 
-	incomingIP, _ := socket.Recv(0)
+	for {
+		msg, _ := socket.Recv(0)
 
-	if incomingIP != "" {
-		heartbeatTrackerNodeObj.dtHeartbeatNodesIPs = append(heartbeatTrackerNodeObj.dtHeartbeatNodesIPs, incomingIP)
+		if msg != "" {
+			fields := strings.Fields(msg)
+			incomingIP := fields[0]
+			incomingID, _ := strconv.Atoi(fields[1])
 
-		socket.Send(acknowledge, 0)
+			IPsMutex.Lock()
+			heartbeatTrackerNodeObj.datanodeIPs[incomingID] = incomingIP
+			IPsMutex.Unlock()
 
-		log.Println("[Heartbeat Tracker Node]", "Received IP = ", incomingIP)
+			timeStampsMutex.Lock()
+			heartbeatTrackerNodeObj.datanodeTimeStamps[incomingID] = time.Now()
+			timeStampsMutex.Unlock()
+
+			socket.Send(acknowledge, 0)
+
+			log.Println("[Heartbeat Tracker Node]", "Received IP = ", incomingIP, "form node #", incomingID)
+		}
 	}
 }

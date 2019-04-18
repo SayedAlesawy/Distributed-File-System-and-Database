@@ -3,6 +3,7 @@ package datanode
 import (
 	"fmt"
 	"log"
+	"strconv"
 	"time"
 
 	"github.com/pebbe/zmq4"
@@ -94,15 +95,13 @@ func (dtHeartbeatNodeObj dtHeartbeatNode) SendIP() {
 
 	socket.Connect(connectionString)
 
-	machineIP := dtHeartbeatNodeObj.dataNode.ip + ":" + dtHeartbeatNodeObj.dataNode.port
+	machineIP := dtHeartbeatNodeObj.dataNode.ip + ":" + dtHeartbeatNodeObj.dataNode.port + " " + strconv.Itoa(dtHeartbeatNodeObj.dataNode.id)
 	acknowledge := ""
 
 	for acknowledge != "ACK" {
-		log.Println("[Heartbeat Data Node]", "Sending IP")
+		log.Printf("[Heartbeat Data Node #%d] Sending IP\n", dtHeartbeatNodeObj.dataNode.id)
 
 		socket.Send(machineIP, 0)
-
-		log.Println("[Heartbeat Data Node]", "Sent bla bla IP")
 
 		acknowledge, _ = socket.Recv(0)
 
