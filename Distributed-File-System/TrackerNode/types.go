@@ -15,9 +15,10 @@ type trackerNode struct {
 // heartbeatTrackerNode A struct to represent a Tracker Node that listens to heartbeats
 //This struct extends the dataNode struct for added functionality
 type heartbeatTrackerNode struct {
-	subscriberSocket   *zmq4.Socket //A susbscriber socket
-	datanodeIPs        map[int]string
-	datanodeTimeStamps map[int]time.Time
+	subscriberSocket       *zmq4.Socket      //A susbscriber socket
+	datanodeIPs            map[int]string    //Keep track of the current connected machine IPs
+	datanodeTimeStamps     map[int]time.Time //Keep track of the timestamps
+	disconnectionThreshold time.Duration     //A threshold to disconnect a machine
 	trackerNode
 }
 
@@ -32,9 +33,10 @@ func NewTrackerNode(_ip string, _port string) trackerNode {
 }
 
 // NewHeartbeatTrackerNode A constructor function for the heartbeatTrackerNode type
-func NewHeartbeatTrackerNode(_trackerNodeObj trackerNode) heartbeatTrackerNode {
+func NewHeartbeatTrackerNode(_trackerNodeObj trackerNode, _disconnectionThreshold time.Duration) heartbeatTrackerNode {
 	heartbeatTrackerNodeObj := heartbeatTrackerNode{
-		trackerNode: _trackerNodeObj,
+		trackerNode:            _trackerNodeObj,
+		disconnectionThreshold: _disconnectionThreshold,
 	}
 
 	heartbeatTrackerNodeObj.datanodeIPs = make(map[int]string)

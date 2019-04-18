@@ -27,7 +27,7 @@ func (heartbeatTrackerNodeObj *heartbeatTrackerNode) ListenToHeartbeats(IPsMutex
 			heartbeatTrackerNodeObj.registerTimeStap(heartbeat, timeStampsMutex)
 		}
 
-		//heartbeatTrackerNodeObj.printMap(m)
+		//heartbeatTrackerNodeObj.printMap(IPsMutex)
 	}
 }
 
@@ -47,10 +47,10 @@ func (heartbeatTrackerNodeObj *heartbeatTrackerNode) UpdateDataNodeAliveStatus(I
 
 		for id, timestamp := range heartbeatTrackerNodeObj.datanodeTimeStamps {
 			diff := time.Now().Sub(timestamp)
-			threshold := time.Duration(2000000001)
+			threshold := heartbeatTrackerNodeObj.disconnectionThreshold
 
 			if diff > threshold {
-				log.Println("deleting node# ", id)
+				log.Println("[Heartbeat Tracker Node]", "deleting node#", id)
 				IPsMutex.Lock()
 				delete(heartbeatTrackerNodeObj.datanodeIPs, id)
 				IPsMutex.Unlock()

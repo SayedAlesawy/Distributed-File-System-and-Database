@@ -4,15 +4,16 @@ import (
 	trackernode "Distributed-Video-Processing-Cluster/Distributed-File-System/TrackerNode"
 	"log"
 	"sync"
+	"time"
 )
 
 func main() {
 	ip := "127.0.0.1"
 	port := "9092"
-
+	disconnectionThreshold := time.Duration(2000000001)
 	trackerNodeObj := trackernode.NewTrackerNode(ip, port)
 
-	trackerHeartbeatNodeObj := trackernode.NewHeartbeatTrackerNode(trackerNodeObj)
+	trackerHeartbeatNodeObj := trackernode.NewHeartbeatTrackerNode(trackerNodeObj, disconnectionThreshold)
 
 	log.Println("[Heartbeat Tracker Node]", "Successfully launched")
 
