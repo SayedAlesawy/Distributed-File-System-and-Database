@@ -44,6 +44,11 @@ func (heartbeatTrackerNodeObj *heartbeatTrackerNode) updateSubscriberConnection(
 	IPsMutex.Unlock()
 }
 
+// disconnectSocket A function to disconnect a socket specified by an endpoint
+func (heartbeatTrackerNodeObj *heartbeatTrackerNode) disconnectSocket(ip string) {
+	heartbeatTrackerNodeObj.subscriberSocket.Disconnect(ip)
+}
+
 // ScanIPs A function to cnstantly scan for incomding IPs of data heartbeat nodes
 func (heartbeatTrackerNodeObj *heartbeatTrackerNode) RecieveIP(IPsMutex *sync.Mutex, timeStampsMutex *sync.Mutex) {
 	socket, _ := zmq4.NewSocket(zmq4.REP)

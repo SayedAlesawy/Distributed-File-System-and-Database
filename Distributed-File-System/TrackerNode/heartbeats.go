@@ -50,12 +50,15 @@ func (heartbeatTrackerNodeObj *heartbeatTrackerNode) UpdateDataNodeAliveStatus(I
 			threshold := heartbeatTrackerNodeObj.disconnectionThreshold
 
 			if diff > threshold {
-				log.Println("[Heartbeat Tracker Node]", "deleting node#", id)
+				heartbeatTrackerNodeObj.disconnectSocket(heartbeatTrackerNodeObj.datanodeIPs[id])
+
 				IPsMutex.Lock()
 				delete(heartbeatTrackerNodeObj.datanodeIPs, id)
 				IPsMutex.Unlock()
 
 				delete(heartbeatTrackerNodeObj.datanodeTimeStamps, id)
+
+				log.Println("[Heartbeat Tracker Node]", "deleting node#", id)
 			}
 		}
 
