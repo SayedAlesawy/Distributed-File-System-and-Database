@@ -1,7 +1,6 @@
 package trackernode
 
 import (
-	client "Distributed-Video-Processing-Cluster/Client/ClientUtil"
 	"log"
 	"strconv"
 	"strings"
@@ -36,7 +35,7 @@ func (heartbeatTrackerNodeObj *heartbeatTrackerNode) establishSubscriberConnecti
 func (heartbeatTrackerNodeObj *heartbeatTrackerNode) updateSubscriberConnection(IPsMutex *sync.Mutex) {
 	IPsMutex.Lock()
 
-	for _, ip := range heartbeatTrackerNodeObj.datanodeIPs {
+	for _, ip := range heartbeatTrackerNodeObj.trackerNode.datanodeIPs {
 		connectionString := "tcp://" + ip
 
 		heartbeatTrackerNodeObj.subscriberSocket.Connect(connectionString)
@@ -50,13 +49,13 @@ func (heartbeatTrackerNodeObj *heartbeatTrackerNode) disconnectSocket(ip string)
 	heartbeatTrackerNodeObj.subscriberSocket.Disconnect("tcp://" + ip)
 }
 
-// ScanIPs A function to cnstantly scan for incomding IPs of data heartbeat nodes
-func (heartbeatTrackerNodeObj *heartbeatTrackerNode) RecieveIP(IPsMutex *sync.Mutex, timeStampsMutex *sync.Mutex) {
+// RecieveHeartbeatNodeIPs A function to cnstantly scan for incomding IPs of data heartbeat nodes
+func (heartbeatTrackerNodeObj *heartbeatTrackerNode) RecieveHeartbeatNodeIPs(IPsMutex *sync.Mutex, timeStampsMutex *sync.Mutex) {
 	socket, _ := zmq4.NewSocket(zmq4.REP)
 	defer socket.Close()
 
 	ip := heartbeatTrackerNodeObj.trackerNode.ip
-	port := heartbeatTrackerNodeObj.trackerNode.port
+	port := heartbeatTrackerNodeObj.trackerNode.datanodePort
 	connectionString := "tcp://" + ip + ":" + port
 
 	socket.Bind(connectionString)
@@ -71,7 +70,7 @@ func (heartbeatTrackerNodeObj *heartbeatTrackerNode) RecieveIP(IPsMutex *sync.Mu
 			incomingID, _ := strconv.Atoi(fields[1])
 
 			IPsMutex.Lock()
-			heartbeatTrackerNodeObj.datanodeIPs[incomingID] = incomingIP
+			heartbeatTrackerNodeObj.trackerNode.datanodeIPs[incomingID] = incomingIP
 			IPsMutex.Unlock()
 
 			timeStampsMutex.Lock()
@@ -81,32 +80,6 @@ func (heartbeatTrackerNodeObj *heartbeatTrackerNode) RecieveIP(IPsMutex *sync.Mu
 			socket.Send(acknowledge, 0)
 
 			log.Println("[Heartbeat Tracker Node]", "Received IP = ", incomingIP, "form node #", incomingID)
-		}
-	}
-}
-
-// ListenToClientRequests A function to listen to client requests
-func (trackerNodeObj *trackerNode) ListenToClientRequests() {
-	socket, _ := zmq4.NewSocket(zmq4.REP)
-	defer socket.Close()
-
-	ip := trackerNodeObj.ip
-	port := trackerNodeObj.port
-	connectionString := "tcp://" + ip + ":" + port
-
-	socket.Bind(connectionString)
-	acknowledge := "ACK"
-
-	for {
-		serializedRequest, _ := socket.Recv(0)
-
-		if serializedRequest != "" {
-			deserializedRequest := client.DeserializeRequest(serializedRequest)
-
-			socket.Send(acknowledge, 0)
-
-			log.Println("[Tracker Node #]", trackerNodeObj.id, "Received request from client#", deserializedRequest.ClientID)
-			client.PrintRequest(deserializedRequest)
 		}
 	}
 }

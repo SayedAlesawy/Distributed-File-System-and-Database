@@ -10,10 +10,10 @@ import (
 func main() {
 	ip := "127.0.0.1"
 	id := 0
-	heartbeatPort := "9092"
+	datanodePort := "9092"
 
 	disconnectionThreshold := time.Duration(2000000001)
-	trackerNodeObj := trackernode.NewTrackerNode(id, ip, heartbeatPort)
+	trackerNodeObj := trackernode.NewTrackerNode(id, ip, "", datanodePort)
 
 	trackerHeartbeatNodeObj := trackernode.NewHeartbeatTrackerNode(trackerNodeObj, disconnectionThreshold)
 
@@ -22,7 +22,7 @@ func main() {
 	var IPsMutex sync.Mutex
 	var timeStampsMutex sync.Mutex
 
-	go trackerHeartbeatNodeObj.RecieveIP(&IPsMutex, &timeStampsMutex)
+	go trackerHeartbeatNodeObj.RecieveHeartbeatNodeIPs(&IPsMutex, &timeStampsMutex)
 
 	go trackerHeartbeatNodeObj.UpdateDataNodeAliveStatus(&IPsMutex, &timeStampsMutex)
 

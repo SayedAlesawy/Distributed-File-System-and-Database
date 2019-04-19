@@ -31,11 +31,11 @@ func (dtHeartbeatNodeObj *dtHeartbeatNode) establishPublisherConnection() {
 }
 
 // SendIP A function to let the heartbeat data node send its IP:Port to the tracker machine
-func (dtHeartbeatNodeObj dtHeartbeatNode) SendIP() {
+func (dtHeartbeatNodeObj dtHeartbeatNode) SendHeartbeatIP() {
 	socket, _ := zmq4.NewSocket(zmq4.REQ)
 	defer socket.Close()
 
-	connectionString := "tcp://" + dtHeartbeatNodeObj.dataNode.trackerIP + ":" + dtHeartbeatNodeObj.dataNode.trackerPort
+	connectionString := "tcp://" + dtHeartbeatNodeObj.dataNode.trackerIP + ":" + dtHeartbeatNodeObj.heartbeatTrackerPort
 
 	socket.Connect(connectionString)
 

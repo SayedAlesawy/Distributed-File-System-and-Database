@@ -1,6 +1,7 @@
 package client
 
 import (
+	"fmt"
 	"log"
 	"strconv"
 	"strings"
@@ -40,6 +41,6 @@ func PrintRequest(request Request) {
 	log.Println("ClientPort = ", request.ClientPort)
 	log.Println("Type = ", string(request.Type))
 	log.Println("FileName = ", request.FileName)
-	log.Println()
-	log.Println()
+	fmt.Println()
+	fmt.Println()
 }

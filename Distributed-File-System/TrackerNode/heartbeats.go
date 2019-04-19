@@ -26,8 +26,6 @@ func (heartbeatTrackerNodeObj *heartbeatTrackerNode) ListenToHeartbeats(IPsMutex
 
 			heartbeatTrackerNodeObj.registerTimeStap(heartbeat, timeStampsMutex)
 		}
-
-		//heartbeatTrackerNodeObj.printMap(IPsMutex)
 	}
 }
 
@@ -50,10 +48,10 @@ func (heartbeatTrackerNodeObj *heartbeatTrackerNode) UpdateDataNodeAliveStatus(I
 			threshold := heartbeatTrackerNodeObj.disconnectionThreshold
 
 			if diff > threshold {
-				heartbeatTrackerNodeObj.disconnectSocket(heartbeatTrackerNodeObj.datanodeIPs[id])
+				heartbeatTrackerNodeObj.disconnectSocket(heartbeatTrackerNodeObj.trackerNode.datanodeIPs[id])
 
 				IPsMutex.Lock()
-				delete(heartbeatTrackerNodeObj.datanodeIPs, id)
+				delete(heartbeatTrackerNodeObj.trackerNode.datanodeIPs, id)
 				IPsMutex.Unlock()
 
 				delete(heartbeatTrackerNodeObj.datanodeTimeStamps, id)
@@ -69,7 +67,7 @@ func (heartbeatTrackerNodeObj *heartbeatTrackerNode) UpdateDataNodeAliveStatus(I
 // printMap A debug function to print the current datanodes
 func (heartbeatTrackerNodeObj heartbeatTrackerNode) printMap(IPsMutex *sync.Mutex) {
 	IPsMutex.Lock()
-	for id, ip := range heartbeatTrackerNodeObj.datanodeIPs {
+	for id, ip := range heartbeatTrackerNodeObj.trackerNode.datanodeIPs {
 		log.Println("Tracking: ", id, " -- ", ip)
 	}
 	IPsMutex.Unlock()

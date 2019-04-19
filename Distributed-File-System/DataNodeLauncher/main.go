@@ -4,19 +4,16 @@ import (
 	datanode "Distributed-Video-Processing-Cluster/Distributed-File-System/DataNode"
 	"fmt"
 	"log"
-	"time"
 )
 
 func main() {
 	//Tracker data
 	trackerIP := "127.0.0.1"
 	trackerPorts := []string{"8001", "8002"}
-	heartbeatTrackerPort := "9092"
 
 	ip := "127.0.0.1"
 	port := ""
 	id := 1
-	heartbeatInterval := time.Second
 
 	log.Print("Port = ")
 	fmt.Scanf("%s", &port)
@@ -26,11 +23,11 @@ func main() {
 
 	dataNodeObj := datanode.NewDataNode(ip, port, id, trackerIP, trackerPorts)
 
-	dtHeartbeatNodeObj := datanode.NewDtHeartbeatNode(dataNodeObj, heartbeatInterval, heartbeatTrackerPort)
+	log.Println("[Data Node #]", id, "Successfully launched")
 
-	log.Println("[Heartbeat Data Node #]", id, "Successfully launched")
+	dataNodeObj.SendDataNodeIPs()
 
-	dtHeartbeatNodeObj.SendHeartbeatIP()
-
-	dtHeartbeatNodeObj.SendHeartBeat()
+	for {
+		//Do Data Node work [Listen to master tracker, and listen to clients]
+	}
 }
