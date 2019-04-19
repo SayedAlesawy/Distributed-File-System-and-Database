@@ -1,0 +1,11 @@
+1 - Request Ports (Trackers listen to client requests here, and clients use them to send requests to trackers) ==> {9001, 9002, ...}
+
+2 - Normal Trackers (ports on which trackers listen to normal Data Nodes) ==> {8001, 8002, ...}
+
+3 - Heartbeat port (Used by heart beat data nodes to send their IPs to the heartbeat tracker process) ==> {9092}
+
+4 - Heartbeat DataNode ports ==> {3001, 3002, ...}
+
+5 - Normal DataNode ports ==> {4001, 4002, ...}
+
+6 - Client ports ==> {5001, 5002, ...} 
