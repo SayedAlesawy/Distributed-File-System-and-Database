@@ -1,7 +1,7 @@
 package main
 
 import (
-	datanode "Distributed-Video-Processing-Cluster/Distributed-File-System/DataNode"
+	datanode "Distributed-Video-Processing-Cluster/Distributed-File-System/DataNode/Utils"
 	"fmt"
 	"log"
 	"time"
@@ -11,7 +11,7 @@ func main() {
 	//Tracker data
 	trackerIP := "127.0.0.1"
 	trackerPorts := []string{"8001", "8002"}
-	heartbeatTrackerPort := "9092"
+	heartbeatTrackerPort := "9000"
 
 	ip := "127.0.0.1"
 	port := ""

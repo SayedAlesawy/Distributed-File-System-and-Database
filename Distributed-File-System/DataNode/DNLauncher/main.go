@@ -1,7 +1,7 @@
 package main
 
 import (
-	datanode "Distributed-Video-Processing-Cluster/Distributed-File-System/DataNode"
+	datanode "Distributed-Video-Processing-Cluster/Distributed-File-System/DataNode/Utils"
 	"fmt"
 	"log"
 )
