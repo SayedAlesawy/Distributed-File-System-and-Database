@@ -58,6 +58,9 @@ func main() {
 		}
 
 		clientObj.SendRequest(requestObj)
+		response := clientObj.ReceiveResponse()
+
+		log.Println("[Client #]", clientID, "Received this:", response)
 
 		requestID++
 	}

@@ -52,6 +52,31 @@ func (clientObj *client) SendRequest(request Request) {
 	log.Printf("[Client #%d] Successfully sent request to Tracker\n", clientObj.id)
 }
 
+// ReceiveResponse A function to receive the response sent by the Tracker
+func (clientObj *client) ReceiveResponse() string {
+	socket, _ := zmq4.NewSocket(zmq4.REP)
+	defer socket.Close()
+
+	connectionString := "tcp://" + clientObj.ip + ":" + clientObj.port
+
+	socket.Bind(connectionString)
+	acknowledge := "ACK"
+
+	response, _ := socket.Recv(0)
+
+	if response != "" {
+		log.Printf("[Client #%d] Successfully received response from Tracker\n", clientObj.id)
+
+		socket.Send(acknowledge, 0)
+
+		return response
+	}
+
+	log.Printf("[Client #%d] Failed to receive response from Tracker\n", clientObj.id)
+
+	return response
+}
+
 func (clientObj *client) CloseConnection() {
 	clientObj.socket.Close()
 }

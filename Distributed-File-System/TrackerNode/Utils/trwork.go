@@ -27,7 +27,32 @@ func (trackerNodeObj *trackerNode) ListenToClientRequests() {
 
 			log.Println(LogSignTR, "#", trackerNodeObj.id, "Received request from client#", deserializedRequest.ClientID)
 
-			client.PrintRequest(deserializedRequest)
+			//client.PrintRequest(deserializedRequest)
+			go trackerNodeObj.handleRequest(deserializedRequest)
 		}
 	}
+}
+
+func (trackerNodeObj *trackerNode) handleRequest(request client.Request) {
+	if request.Type == client.Download {
+		//Call download request handler
+	} else if request.Type == client.Upload {
+		//Call upload request handler
+		trackerNodeObj.uploadRequestHandler(request)
+	} else if request.Type == client.Display {
+		//Call display request handler
+	} else {
+		log.Println(LogSignTR, "Invalid request type")
+	}
+}
+
+func (trackerNodeObj *trackerNode) uploadRequestHandler(request client.Request) {
+	//Should check the DataNode database and choose an alive node
+	//Until I install the DB, I will always assume that the first Data Node is always alive
+	//And I will always pick it
+	log.Println(LogSignTR, "#", trackerNodeObj.id, "Upload Request Handler Started")
+
+	dataNodeConnectionString := "127.0.0.1" + ":" + "7001"
+
+	trackerNodeObj.sendDataNodePortToClient(request, dataNodeConnectionString)
 }

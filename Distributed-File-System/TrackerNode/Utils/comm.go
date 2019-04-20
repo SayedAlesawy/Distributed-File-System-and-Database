@@ -1,6 +1,7 @@
 package trackernode
 
 import (
+	client "Distributed-Video-Processing-Cluster/Client/ClientUtil"
 	"log"
 	"strconv"
 	"strings"
@@ -85,4 +86,30 @@ func (trackerNodeLauncherObj *trackerNodeLauncher) ReceiveHandshake(HBIPsMutex *
 			log.Println(LogSignL, "Received IP = ", incomingHBIP, "form node #", incomingID)
 		}
 	}
+}
+
+// sendDataNodePortToClient A function send a data node connection string to client
+func (trackerNodeObj *trackerNode) sendDataNodePortToClient(request client.Request, dataNodeConnectionString string) {
+	socket, _ := zmq4.NewSocket(zmq4.REQ)
+	defer socket.Close()
+
+	clientConnectionString := "tcp://" + request.ClientIP + ":" + request.ClientPort
+
+	socket.Connect(clientConnectionString)
+
+	acknowledge := ""
+
+	for acknowledge != "ACK" {
+		log.Println(LogSignTR, trackerNodeObj.id, "Responding to reqest#", request.ID, "from Client #", request.ClientID)
+
+		socket.Send(dataNodeConnectionString, 0)
+
+		acknowledge, _ = socket.Recv(0)
+
+		if acknowledge != "ACK" {
+			log.Println(LogSignTR, trackerNodeObj.id, "Failed to respond to request#", request.ID, "from Client #", request.ClientID)
+		}
+	}
+
+	log.Println(LogSignTR, trackerNodeObj.id, "Responded to request#", request.ID, "from Client #", request.ClientID)
 }

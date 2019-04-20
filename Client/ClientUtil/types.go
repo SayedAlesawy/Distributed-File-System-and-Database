@@ -16,9 +16,14 @@ type client struct {
 type RequestType string
 
 const (
-	download RequestType = "download"
-	upload   RequestType = "upload"
-	display  RequestType = "display"
+	//Download A Download request (dwn)
+	Download RequestType = "dwn"
+
+	//Upload A Upload request (up)
+	Upload RequestType = "up"
+
+	//Display A Download request (ls)
+	Display RequestType = "ls"
 )
 
 // Request A struct to represent the client request
