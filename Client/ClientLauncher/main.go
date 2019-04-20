@@ -9,7 +9,7 @@ import (
 func main() {
 	//Tracker data
 	trackerIP := "127.0.0.1"
-	trackerPorts := []string{"9001", "9002"}
+	trackerPorts := []string{"8001", "8002"}
 
 	//Client data
 	clientIP := "127.0.0.1"
@@ -17,11 +17,11 @@ func main() {
 	clientPort := ""
 
 	//Read Client data
-	log.Print("[Client] Port = ")
-	fmt.Scanf("%s", &clientPort)
-
 	log.Print("[Client] ID = ")
 	fmt.Scanf("%d", &clientID)
+
+	log.Print("[Client] Port = ")
+	fmt.Scanf("%s", &clientPort)
 
 	clientObj := client.NewClient(clientID, clientIP, clientPort, trackerIP, trackerPorts)
 	clientObj.EstablishConnection()

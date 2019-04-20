@@ -8,8 +8,6 @@ import (
 	"strconv"
 )
 
-const logSign string = "Tracker"
-
 func main() {
 	args := os.Args
 	fmt.Println(args[1:])
@@ -22,11 +20,7 @@ func main() {
 
 	trackerNodeObj := trackernode.NewTrackerNode(id, ip, reqPort, dnPort)
 
-	log.Println(logSign+"#"+args[2], "Successfully launched")
-
-	//var IPsMutex sync.Mutex
-
-	//go trackerNodeObj.RecieveDataNodeIPs(&IPsMutex)
+	log.Println(trackernode.LogSignTR, args[2], "Successfully launched")
 
 	trackerNodeObj.ListenToClientRequests()
 }

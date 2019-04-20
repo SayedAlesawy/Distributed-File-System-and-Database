@@ -11,64 +11,59 @@ import (
 )
 
 // ListenToHeartbeats A function to listen to incoming heartbeats
-func (heartbeatTrackerNodeObj *heartbeatTrackerNode) ListenToHeartbeats(IPsMutex *sync.Mutex, timeStampsMutex *sync.Mutex) {
-	heartbeatTrackerNodeObj.establishSubscriberConnection()
+func (trackerNodeLauncherObj *trackerNodeLauncher) ListenToHeartbeats(HBIPsMutex *sync.Mutex, timeStampsMutex *sync.Mutex) {
+	trackerNodeLauncherObj.establishSubscriberConnection()
 
-	defer heartbeatTrackerNodeObj.subscriberSocket.Close()
+	defer trackerNodeLauncherObj.subscriberSocket.Close()
 
 	for {
-		heartbeatTrackerNodeObj.updateSubscriberConnection(IPsMutex)
+		trackerNodeLauncherObj.updateSubscriberConnection(HBIPsMutex)
 
-		heartbeat, _ := heartbeatTrackerNodeObj.subscriberSocket.Recv(zmq4.DONTWAIT)
+		heartbeat, _ := trackerNodeLauncherObj.subscriberSocket.Recv(zmq4.DONTWAIT)
 
 		if heartbeat != "" {
-			log.Println("Received", heartbeat)
+			log.Println(LogSignL, "Received", heartbeat)
 
-			heartbeatTrackerNodeObj.registerTimeStap(heartbeat, timeStampsMutex)
+			trackerNodeLauncherObj.registerTimeStap(heartbeat, timeStampsMutex)
 		}
 	}
 }
 
 // registerTimeStap A function to register the timestamp of the last received heartbeat
-func (heartbeatTrackerNodeObj *heartbeatTrackerNode) registerTimeStap(heartbeat string, timeStampMutex *sync.Mutex) {
+func (trackerNodeLauncherObj *trackerNodeLauncher) registerTimeStap(heartbeat string, timeStampMutex *sync.Mutex) {
 	id, _ := strconv.Atoi((strings.Fields(heartbeat))[1])
 
 	timeStampMutex.Lock()
-	heartbeatTrackerNodeObj.datanodeTimeStamps[id] = time.Now()
+	trackerNodeLauncherObj.datanodeTimeStamps[id] = time.Now()
 	timeStampMutex.Unlock()
 }
 
 // updateDataNodeAliveStatus A function the update the status of the alive datanodes
-func (heartbeatTrackerNodeObj *heartbeatTrackerNode) UpdateDataNodeAliveStatus(IPsMutex *sync.Mutex, timeStampsMutex *sync.Mutex) {
+func (trackerNodeLauncherObj *trackerNodeLauncher) UpdateDataNodeAliveStatus(HBIPsMutex *sync.Mutex, DNIPsMutex *sync.Mutex, timeStampsMutex *sync.Mutex) {
 	for {
 		timeStampsMutex.Lock()
 
-		for id, timestamp := range heartbeatTrackerNodeObj.datanodeTimeStamps {
+		for id, timestamp := range trackerNodeLauncherObj.datanodeTimeStamps {
 			diff := time.Now().Sub(timestamp)
-			threshold := heartbeatTrackerNodeObj.disconnectionThreshold
+			threshold := trackerNodeLauncherObj.disconnectionThreshold
 
 			if diff > threshold {
-				heartbeatTrackerNodeObj.disconnectSocket(heartbeatTrackerNodeObj.trackerNode.datanodeIPs[id])
+				trackerNodeLauncherObj.disconnectSocket(trackerNodeLauncherObj.datanodeHBIPs[id])
 
-				IPsMutex.Lock()
-				delete(heartbeatTrackerNodeObj.trackerNode.datanodeIPs, id)
-				IPsMutex.Unlock()
+				HBIPsMutex.Lock()
+				delete(trackerNodeLauncherObj.datanodeHBIPs, id)
+				HBIPsMutex.Unlock()
 
-				delete(heartbeatTrackerNodeObj.datanodeTimeStamps, id)
+				DNIPsMutex.Lock()
+				delete(trackerNodeLauncherObj.datanodeIPs, id)
+				DNIPsMutex.Unlock()
 
-				log.Println("[Heartbeat Tracker Node]", "deleting node#", id)
+				delete(trackerNodeLauncherObj.datanodeTimeStamps, id)
+
+				log.Println(LogSignL, "Node#", id, "has gone offline")
 			}
 		}
 
 		timeStampsMutex.Unlock()
 	}
-}
-
-// printMap A debug function to print the current datanodes
-func (heartbeatTrackerNodeObj heartbeatTrackerNode) printMap(IPsMutex *sync.Mutex) {
-	IPsMutex.Lock()
-	for id, ip := range heartbeatTrackerNodeObj.trackerNode.datanodeIPs {
-		log.Println("Tracking: ", id, " -- ", ip)
-	}
-	IPsMutex.Unlock()
 }

@@ -8,15 +8,13 @@ import (
 	"time"
 )
 
-const logSign string = "[Master Tracker Node]"
-
 // Master Tracker data
 const masterTrackerIP string = "127.0.0.1"
 const ipListenerPort string = "9000"
 const masterTrackerID int = 0
 
 func launchTrackers() {
-	log.Println(logSign, "Launching Tracker Processes")
+	log.Println(trackernode.LogSignL, "Launching Tracker Processes")
 
 	sideTrackerDNIDs := []string{"1", "2"}
 	sideTrackerDNPorts := []string{"9001", "9002"}
@@ -31,32 +29,34 @@ func launchTrackers() {
 		err := cmd.Start()
 
 		if err != nil {
-			log.Println(logSign, "Error starting Tracker Process #", sideTrackerDNIDs[i])
+			log.Println(trackernode.LogSignL, "Error starting Tracker Process #", sideTrackerDNIDs[i])
 			return
 		}
 
-		log.Println(logSign, "Launched Tracker Process#", sideTrackerDNIDs[i])
+		log.Println(trackernode.LogSignL, "Launched Tracker Process#", sideTrackerDNIDs[i])
 	}
 
-	log.Println(logSign, "is all set!")
+	log.Println(trackernode.LogSignL, "is all set!")
 }
 
 func main() {
 	disconnectionThreshold := time.Duration(2000000001)
-	trackerNodeObj := trackernode.NewTrackerNode(masterTrackerID, masterTrackerIP, "", ipListenerPort)
 
-	trackerHeartbeatNodeObj := trackernode.NewHeartbeatTrackerNode(trackerNodeObj, disconnectionThreshold)
+	trackerNodeObj := trackernode.NewTrackerNode(masterTrackerID, masterTrackerIP, "", "")
 
-	log.Println(logSign, "Successfully launched")
+	trackerNodeLauncherObj := trackernode.NewTrackerNodeLauncher(trackerNodeObj, disconnectionThreshold, ipListenerPort)
+
+	log.Println(trackernode.LogSignL, "Successfully launched")
 
 	launchTrackers()
 
-	var IPsMutex sync.Mutex
+	var HBIPsMutex sync.Mutex
+	var DNIPsMuttex sync.Mutex
 	var timeStampsMutex sync.Mutex
 
-	go trackerHeartbeatNodeObj.RecieveHeartbeatNodeIPs(&IPsMutex, &timeStampsMutex)
+	go trackerNodeLauncherObj.ReceiveHandshake(&HBIPsMutex, &DNIPsMuttex, &timeStampsMutex)
 
-	go trackerHeartbeatNodeObj.UpdateDataNodeAliveStatus(&IPsMutex, &timeStampsMutex)
+	go trackerNodeLauncherObj.UpdateDataNodeAliveStatus(&HBIPsMutex, &DNIPsMuttex, &timeStampsMutex)
 
-	trackerHeartbeatNodeObj.ListenToHeartbeats(&IPsMutex, &timeStampsMutex)
+	trackerNodeLauncherObj.ListenToHeartbeats(&HBIPsMutex, &timeStampsMutex)
 }
