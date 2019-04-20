@@ -13,6 +13,7 @@ const logSign string = "Tracker"
 func main() {
 	args := os.Args
 	fmt.Println(args[1:])
+
 	//Tracker parameters
 	ip := args[1]
 	id, _ := strconv.Atoi(args[2])

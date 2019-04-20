@@ -2,35 +2,83 @@ package main
 
 import (
 	datanode "Distributed-Video-Processing-Cluster/Distributed-File-System/DataNode/Utils"
-	"fmt"
 	"log"
+	"os"
+	"os/exec"
+	"strconv"
 	"time"
 )
 
+//DataNode Launcher Data
+const dataNodeLauncherIP string = "127.0.0.1"
+const heartbeatInterval time.Duration = time.Second
+
+//Tracker Data
+const trackerIP string = "127.0.0.1"
+const trackerIPsPort string = "9000"
+
+var trackerDNPorts = []string{"9001", "9002"}
+
+func getTrackerParams() string {
+	trackerParams := trackerIP + " " + trackerDNPorts[0] + " " + trackerDNPorts[1]
+
+	return trackerParams
+}
+
+func launchDataNodes(launcherID string, launcherPort string) {
+	log.Println(datanode.LogSignL, "Launching Data Nodes Processes")
+
+	dataNodePorts := []string{launcherPort + "1", launcherPort + "2"}
+
+	path := "../DNLauncher/main.go"
+
+	for i := 0; i < 2; i++ {
+		params := getTrackerParams() + " " + dataNodeLauncherIP + " " + launcherID + " " + dataNodePorts[i]
+		command := "go run " + path + " " + params
+
+		cmd := exec.Command("gnome-terminal", "--title=DataNode"+launcherID, "-e", command)
+		err := cmd.Start()
+
+		if err != nil {
+			log.Println(datanode.LogSignL, "Error starting Data Node Process#", i+1)
+			return
+		}
+
+		log.Println(datanode.LogSignL, "Launched Data Node Process#", i+1)
+	}
+
+	log.Println(datanode.LogSignL, "is all set!")
+}
+
+func getHandshake(launcherID string, launcherPort string) string {
+	hbIP := dataNodeLauncherIP + ":" + launcherPort + "0"
+	dn1IP := dataNodeLauncherIP + ":" + launcherPort + "1"
+	dn2IP := dataNodeLauncherIP + ":" + launcherPort + "2"
+
+	handshake := hbIP + " " + dn1IP + " " + dn2IP + " " + launcherID
+
+	return handshake
+}
+
 func main() {
-	//Tracker data
-	trackerIP := "127.0.0.1"
-	trackerPorts := []string{"8001", "8002"}
-	heartbeatTrackerPort := "9000"
+	//Receive command line params
+	args := os.Args
 
-	ip := "127.0.0.1"
-	port := ""
-	id := 1
-	heartbeatInterval := time.Second
+	//DataNode Launcher Params
+	dataNodeLauncherID, _ := strconv.Atoi(args[1])
+	dataNodeLauncherPort := args[2] //Sent to the tracker as handshake
 
-	log.Print("Port = ")
-	fmt.Scanf("%s", &port)
+	dataNodeObj := datanode.NewDataNode(dataNodeLauncherID, dataNodeLauncherIP, dataNodeLauncherPort+"0",
+		trackerIP, trackerDNPorts)
 
-	log.Print("ID = ")
-	fmt.Scanf("%d", &id)
+	dataNodeLauncherObj := datanode.NewDataNodeLauncher(dataNodeObj, heartbeatInterval, dataNodeLauncherPort+"0",
+		trackerIPsPort)
 
-	dataNodeObj := datanode.NewDataNode(ip, port, id, trackerIP, trackerPorts)
+	log.Println(datanode.LogSignL, "#", dataNodeLauncherID, "Successfully launched")
 
-	dtHeartbeatNodeObj := datanode.NewDtHeartbeatNode(dataNodeObj, heartbeatInterval, heartbeatTrackerPort)
+	launchDataNodes(args[1], dataNodeLauncherPort)
 
-	log.Println("[Heartbeat Data Node #]", id, "Successfully launched")
+	dataNodeLauncherObj.SendHandshake(getHandshake(args[1], dataNodeLauncherPort))
 
-	dtHeartbeatNodeObj.SendHeartbeatIP()
-
-	dtHeartbeatNodeObj.SendHeartBeat()
+	dataNodeLauncherObj.SendHeartBeat()
 }

@@ -7,16 +7,16 @@ import (
 )
 
 // SendHeartBeat A function to publish heartbeat signals
-func (dtHeartbeatNodeObj *dtHeartbeatNode) SendHeartBeat() {
-	defer dtHeartbeatNodeObj.publisherSocket.Close()
+func (dataNodeLauncherObj *dataNodeLauncher) SendHeartBeat() {
+	defer dataNodeLauncherObj.publisherSocket.Close()
 
-	dtHeartbeatNodeObj.establishPublisherConnection()
+	dataNodeLauncherObj.establishPublisherConnection()
 
-	for range time.Tick(dtHeartbeatNodeObj.heartbeatInterval) {
-		heartbeat := fmt.Sprintf("Heartbeat %d", dtHeartbeatNodeObj.dataNode.id)
+	for range time.Tick(dataNodeLauncherObj.heartbeatInterval) {
+		heartbeat := fmt.Sprintf("Heartbeat %d", dataNodeLauncherObj.dataNode.id)
 
-		dtHeartbeatNodeObj.publisherSocket.Send(heartbeat, 0)
+		dataNodeLauncherObj.publisherSocket.Send(heartbeat, 0)
 
-		log.Println("Sent", heartbeat)
+		log.Println(LogSignL, dataNodeLauncherObj.dataNode.id, "Sent", "Heartbeat")
 	}
 }

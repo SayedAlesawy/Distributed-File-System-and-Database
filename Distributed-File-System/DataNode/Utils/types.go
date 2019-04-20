@@ -6,30 +6,37 @@ import (
 	"github.com/pebbe/zmq4"
 )
 
+// LogSignL Used for logging Launcher messages
+const LogSignL string = "[Data Node Launcher]"
+
+// LogSignDN Used for logging Data Node messages
+const LogSignDN string = "[Data Node]"
+
 // dataNode A struct to represent the basic structure of a Data Node
 type dataNode struct {
-	ip           string   //The IP of the current machine
-	port         string   //The port to which the current will publish
 	id           int      //A unique ID for the current machine
+	ip           string   //The IP of the current machine
+	port         string   //The port the Tracker uses to route client requests
 	trackerIP    string   //The IP of the tracker machine
-	trackerPorts []string //The port of the tracker machine
+	trackerPorts []string //The ports of the tracker machine (processes)
 }
 
 // dtHeartbeatNode A struct to represent a data node that sends heartbeat signals
 // This struct extends the dataNode struct for added functionality
-type dtHeartbeatNode struct {
-	publisherSocket      *zmq4.Socket  //A publisher socket to which the machine publishes
-	heartbeatInterval    time.Duration //Defines the frequency at which the data node sends heartbeats
-	heartbeatTrackerPort string        //The port of the heartbeat service in the tracker
-	dataNode                           //Provides the basic functionality of a data node
+type dataNodeLauncher struct {
+	publisherSocket   *zmq4.Socket  //A publisher socket to which the machine publishes heartbeats
+	heartbeatInterval time.Duration //Defines the frequency at which the launcer publishes heartbeats
+	trackerIPsPort    string        //The port on which the tracker machine receives IPs
+	heartbeatPort     string        //The port on which the launcher publishes heartbeats
+	dataNode                        //Provides the basic functionality of a data node
 }
 
 // NewDataNode A constructor function for the dataNode type
-func NewDataNode(_ip string, _port string, _id int, _trackerIP string, _trackerPorts []string) dataNode {
+func NewDataNode(_id int, _ip string, _port string, _trackerIP string, _trackerPorts []string) dataNode {
 	dataNodeObj := dataNode{
+		id:           _id,
 		ip:           _ip,
 		port:         _port,
-		id:           _id,
 		trackerIP:    _trackerIP,
 		trackerPorts: _trackerPorts,
 	}
@@ -37,13 +44,14 @@ func NewDataNode(_ip string, _port string, _id int, _trackerIP string, _trackerP
 	return dataNodeObj
 }
 
-// NewDtHeartbeatNode A constructor function for the DtHeartbeatNode type
-func NewDtHeartbeatNode(_dataNodeObj dataNode, _heartbeatInterval time.Duration, _heartbeatTrackerPort string) dtHeartbeatNode {
-	dtHeartbeatNodeObj := dtHeartbeatNode{
-		heartbeatInterval:    _heartbeatInterval,
-		dataNode:             _dataNodeObj,
-		heartbeatTrackerPort: _heartbeatTrackerPort,
+// NewDataNodeLauncher A constructor function for the DataNode Launcher type
+func NewDataNodeLauncher(_dataNodeObj dataNode, _heartbeatInterval time.Duration, _heartbeatPort string, _trackerIPsPort string) dataNodeLauncher {
+	dataNodeLauncher := dataNodeLauncher{
+		heartbeatInterval: _heartbeatInterval,
+		heartbeatPort:     _heartbeatPort,
+		trackerIPsPort:    _trackerIPsPort,
+		dataNode:          _dataNodeObj,
 	}
 
-	return dtHeartbeatNodeObj
+	return dataNodeLauncher
 }

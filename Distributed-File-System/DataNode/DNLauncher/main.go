@@ -4,30 +4,31 @@ import (
 	datanode "Distributed-Video-Processing-Cluster/Distributed-File-System/DataNode/Utils"
 	"fmt"
 	"log"
+	"os"
+	"strconv"
 )
 
+var trackerIP = ""
+var trackerDNPorts = []string{"", ""}
+
 func main() {
-	//Tracker data
-	trackerIP := "127.0.0.1"
-	trackerPorts := []string{"8001", "8002"}
+	//Receive command line params
+	args := os.Args
+	fmt.Println(args[1:])
 
-	ip := "127.0.0.1"
-	port := ""
-	id := 1
+	//Tracker Data
+	trackerIP = args[1]
+	trackerDNPorts[0] = args[2]
+	trackerDNPorts[1] = args[3]
 
-	log.Print("Port = ")
-	fmt.Scanf("%s", &port)
+	//Data Node Data
+	ip := args[4]
+	id, _ := strconv.Atoi(args[5])
+	port := args[6]
 
-	log.Print("ID = ")
-	fmt.Scanf("%d", &id)
+	dataNodeObj := datanode.NewDataNode(id, ip, port, trackerIP, trackerDNPorts)
 
-	dataNodeObj := datanode.NewDataNode(ip, port, id, trackerIP, trackerPorts)
+	log.Println(datanode.LogSignDN, "#", id, "Successfully launched")
 
-	log.Println("[Data Node #]", id, "Successfully launched")
-
-	dataNodeObj.SendDataNodeIPs()
-
-	for {
-		//Do Data Node work [Listen to master tracker, and listen to clients]
-	}
+	dataNodeObj.DoWork()
 }

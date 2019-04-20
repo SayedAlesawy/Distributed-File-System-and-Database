@@ -66,11 +66,13 @@ func (heartbeatTrackerNodeObj *heartbeatTrackerNode) RecieveHeartbeatNodeIPs(IPs
 
 		if msg != "" {
 			fields := strings.Fields(msg)
-			incomingIP := fields[0]
-			incomingID, _ := strconv.Atoi(fields[1])
+			incomingHBIP := fields[0]
+			//incomdingDN1IP := fields[1]
+			//incomdingDN2IP := fields[2]
+			incomingID, _ := strconv.Atoi(fields[3])
 
 			IPsMutex.Lock()
-			heartbeatTrackerNodeObj.trackerNode.datanodeIPs[incomingID] = incomingIP
+			heartbeatTrackerNodeObj.trackerNode.datanodeIPs[incomingID] = incomingHBIP
 			IPsMutex.Unlock()
 
 			timeStampsMutex.Lock()
@@ -79,7 +81,7 @@ func (heartbeatTrackerNodeObj *heartbeatTrackerNode) RecieveHeartbeatNodeIPs(IPs
 
 			socket.Send(acknowledge, 0)
 
-			log.Println("[Heartbeat Tracker Node]", "Received IP = ", incomingIP, "form node #", incomingID)
+			log.Println("[Heartbeat Tracker Node]", "Received IP = ", incomingHBIP, "form node #", incomingID)
 		}
 	}
 }
