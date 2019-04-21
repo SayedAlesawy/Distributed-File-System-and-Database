@@ -1,17 +1,23 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"math/rand"
+	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	_ "github.com/lib/pq" // here
+
+	"github.com/joho/godotenv"
 	"github.com/pebbe/zmq4"
 )
 
 //======================= Common Functions ==================
+
 func initSubscriber(addr string) *zmq4.Socket {
 	subscriber, _ := zmq4.NewSocket(zmq4.SUB)
 	subscriber.SetLinger(0)
@@ -48,10 +54,34 @@ func commandDataDeseralizer(s string) (string, string, string) {
 	}
 	return fields[0], fields[1], fields[2]
 }
-func registerUser(name string, email string, password string) bool {
+func registerUser(name string, email string, password string, db *sql.DB) bool {
+	sqlStatement := `INSERT INTO clients (name, email, passowrd) VALUES ( $1, $2,$3);`
 	fmt.Println("[RegisterUser] Saving user data ..")
-	fmt.Println("[RegisterUser] Success")
+	_, err := db.Exec(sqlStatement, name, email, password)
+	if err != nil {
+		log.Println(err)
+	} else {
+		fmt.Println("[RegisterUser] Success")
+	}
+
 	return true
+}
+func loginUser(name string, password string, db *sql.DB) bool {
+	sqlStatement := `SELECT * FROM clients WHERE email=$1 and passowrd=$2;`
+
+	var clientID int
+	var clientName, clientEmail, clientPassword string
+
+	row := db.QueryRow(sqlStatement, name, password)
+	switch err := row.Scan(&clientID, &clientName, &clientEmail, &clientPassword); err {
+	case sql.ErrNoRows:
+		return false
+	case nil:
+		return true
+	default:
+		panic(err)
+
+	}
 }
 
 func getOnlineSlaves(BeatStamps []time.Time) []int {
@@ -69,10 +99,41 @@ func getOnlineSlaves(BeatStamps []time.Time) []int {
 	return onlineSlaves
 }
 
+func connectDB() *sql.DB {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("[DB]Error loading .env file")
+	}
+
+	host := os.Getenv("HOST")
+	port := os.Getenv("PORT")
+	user := os.Getenv("USER_NAME")
+	password := os.Getenv("PASSWORD")
+	dbname := os.Getenv("DB_NAME")
+
+	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s "+
+		"password=%s dbname=%s sslmode=disable",
+		host, port, user, password, dbname)
+	db, err := sql.Open("postgres", psqlInfo)
+	if err != nil {
+		panic(err)
+	}
+
+	err = db.Ping()
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("[DB] Successfully connected!")
+	return db
+}
+
 //======================= Common Functions ==================
 
 //ListenToClientReq :
 func ListenToClientReq(InsertionsStack [][]string, BeatStamp []time.Time, slaveIPs []string, clientIP string) {
+	db := connectDB()
+	defer db.Close()
 
 	clientSubscriber := initSubscriber(clientIP + "9092")
 
@@ -107,7 +168,8 @@ func ListenToClientReq(InsertionsStack [][]string, BeatStamp []time.Time, slaveI
 
 		if strings.Compare(commandType, "REGISTER") == 0 {
 			fmt.Println("[ClientSubscriber] Sending Command Data to DB Execution Layer")
-			registerUser(commandDataDeseralizer(commandData))
+			name, email, password := commandDataDeseralizer(commandData)
+			registerUser(name, email, password, db)
 			fmt.Println("[ClientSubscriber] Adding InsertionQuery to all slaves :", commandData)
 
 			for i := range InsertionsStack {
@@ -117,7 +179,7 @@ func ListenToClientReq(InsertionsStack [][]string, BeatStamp []time.Time, slaveI
 		} else if strings.Compare(commandType, "LOGIN") == 0 {
 			if chosenSlave != -1 {
 				fmt.Println("[ClientSubscriber] Assigning ReadQuery to slave ["+strconv.Itoa(chosenSlave)+"]  :", s)
-				clientPublisher.Send(slaveIPs[chosenSlave]+":600"+strconv.Itoa(1+chosenSlave), 0)
+				clientPublisher.Send(strconv.Itoa(1+chosenSlave), 0)
 			}
 
 		}
