@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -13,62 +14,66 @@ import (
 	"github.com/pebbe/zmq4"
 )
 
-//ReadQueryListner :
-func ReadQueryListner(status *string, db *sql.DB, id int) {
+//======================= Common Functions ==================
 
+func initSubscriber(addr string) *zmq4.Socket {
 	subscriber, _ := zmq4.NewSocket(zmq4.SUB)
 	subscriber.SetLinger(0)
-	defer subscriber.Close()
 
-	subscriber.Connect("tcp://127.0.0.1:600" + strconv.Itoa(id))
+	subscriber.Connect(addr)
 	subscriber.SetSubscribe("")
-	for {
-		s, err := subscriber.Recv(0)
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-		fmt.Println("[ReadQueryListner] rec", s)
-
-	}
+	return subscriber
 }
 
-//TrackerUpdateListner :
-func TrackerUpdateListner(status *string, db *sql.DB, id int) {
-	subscriber, _ := zmq4.NewSocket(zmq4.SUB)
-	subscriber.SetLinger(0)
-	defer subscriber.Close()
-
-	subscriber.Connect("tcp://127.0.0.1:500" + strconv.Itoa(id))
-	subscriber.SetSubscribe("")
-	for {
-		s, err := subscriber.Recv(0)
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-		fmt.Println("[TrackerUpdateListner] rec", s)
-		ExecuteQuery(s, db)
-
-	}
-}
-
-//HeartBeatPublisher :
-func HeartBeatPublisher(status *string, id int) {
+func initPublisher(addr string) *zmq4.Socket {
 	publisher, err := zmq4.NewSocket(zmq4.PUB)
 	if err != nil {
 		fmt.Print(err)
-		return
+		return nil
+	}
+	publisher.SetLinger(0)
+	publisher.Bind(addr)
+	return publisher
+}
+
+func commandDataDeseralizer(s string) (string, string, string) {
+	fields := strings.Split(s, ";")
+	if len(fields) < 3 {
+		if len(fields) < 2 {
+			return fields[0], "", ""
+		}
+		return fields[0], fields[1], ""
+	}
+	return fields[0], fields[1], fields[2]
+}
+func registerUser(name string, email string, password string, db *sql.DB) bool {
+	sqlStatement := `INSERT INTO clients (name, email, passowrd) VALUES ( $1, $2,$3);`
+	fmt.Println("[RegisterUser] Saving user data ..")
+	_, err := db.Exec(sqlStatement, name, email, password)
+	if err != nil {
+		log.Println(err)
+	} else {
+		fmt.Println("[RegisterUser] Success")
 	}
 
-	publisher.SetLinger(0)
-	defer publisher.Close()
+	return true
+}
+func loginUser(name string, password string, db *sql.DB) bool {
+	sqlStatement := `SELECT * FROM clients WHERE email=$1 and passowrd=$2;`
 
-	publisher.Bind("tcp://127.0.0.1:300" + strconv.Itoa(id))
+	var clientID int
+	var clientName, clientEmail, clientPassword string
 
-	for range time.Tick(time.Second * 2) {
-		publisher.Send("Heartbeat", 0)
-		log.Println("send", "Heartbeat:"+*status)
+	row := db.QueryRow(sqlStatement, name, password)
+	switch err := row.Scan(&clientID, &clientName, &clientEmail, &clientPassword); err {
+	case sql.ErrNoRows:
+		return false
+	case nil:
+		return true
+	default:
+		fmt.Println(err)
+		return false
+
 	}
 }
 
@@ -101,17 +106,63 @@ func connectDB() *sql.DB {
 	return db
 }
 
-// ExecuteQuery ;
-func ExecuteQuery(sqlStatement string, db *sql.DB) {
+//======================= Common Functions ==================
 
-	_, err := db.Exec(sqlStatement)
-	if err != nil {
-		log.Println(err)
-	} else {
-		fmt.Println("[DB] Successfully Executed!")
+//ReadQueryListner :
+func ReadQueryListner(status *string, db *sql.DB, id int) {
+
+	subscriber := initSubscriber("tcp://127.0.0.1:600" + strconv.Itoa(id))
+	defer subscriber.Close()
+
+	for {
+		s, err := subscriber.Recv(0)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		fmt.Println("[ReadQueryListner] recieved", s)
+		email, password, _ := commandDataDeseralizer(s)
+
+		status := loginUser(email, password, db)
+		if status {
+			fmt.Println("[ReadQueryListner] access granted ")
+		} else {
+			fmt.Println("[ReadQueryListner] access denied")
+		}
 
 	}
+}
 
+//TrackerUpdateListner :
+func TrackerUpdateListner(status *string, db *sql.DB, id int) {
+	subscriber := initSubscriber("tcp://127.0.0.1:500" + strconv.Itoa(id))
+	defer subscriber.Close()
+
+	for {
+		s, err := subscriber.Recv(0)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		fmt.Println("[TrackerUpdateListner] rec", s)
+		name, email, password := commandDataDeseralizer(s)
+		registerUser(name, email, password, db)
+
+	}
+}
+
+//HeartBeatPublisher :
+func HeartBeatPublisher(status *string, id int) {
+	publisher := initPublisher("tcp://127.0.0.1:300" + strconv.Itoa(id))
+
+	defer publisher.Close()
+
+	publisher.Bind("tcp://127.0.0.1:300" + strconv.Itoa(id))
+
+	for range time.Tick(time.Second * 2) {
+		publisher.Send("Heartbeat", 0)
+		log.Println("send", "Heartbeat:"+*status)
+	}
 }
 
 func main() {

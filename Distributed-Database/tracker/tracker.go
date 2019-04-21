@@ -4,124 +4,105 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	_ "github.com/lib/pq" // here
+
 	"github.com/joho/godotenv"
 	"github.com/pebbe/zmq4"
-
-	_ "github.com/lib/pq" // here
 )
 
-//ListenToClientReq :
-func ListenToClientReq(InsertionsStack [][]string, BeatStamp []time.Time) {
+//======================= Common Functions ==================
 
-	db := connectDB()
-	defer db.Close()
-
+func initSubscriber(addr string) *zmq4.Socket {
 	subscriber, _ := zmq4.NewSocket(zmq4.SUB)
 	subscriber.SetLinger(0)
-	defer subscriber.Close()
 
-	subscriber.Connect("tcp://127.0.0.1:9092")
+	subscriber.Connect(addr)
 	subscriber.SetSubscribe("")
+	return subscriber
+}
 
+func initPublisher(addr string) *zmq4.Socket {
 	publisher, err := zmq4.NewSocket(zmq4.PUB)
 	if err != nil {
 		fmt.Print(err)
-		return
+		return nil
+	}
+	publisher.SetLinger(0)
+	publisher.Bind(addr)
+	return publisher
+}
+func commandDeseralizer(s string) (string, string) {
+	fields := strings.Split(s, ":")
+	if len(fields) < 2 {
+		return "", ""
+	}
+	return fields[0], fields[1]
+}
+func commandDataDeseralizer(s string) (string, string, string) {
+	fields := strings.Split(s, ";")
+	if len(fields) < 3 {
+		if len(fields) < 2 {
+			return fields[0], "", ""
+		}
+		return fields[0], fields[1], ""
+	}
+	return fields[0], fields[1], fields[2]
+}
+func registerUser(name string, email string, password string, db *sql.DB) bool {
+	sqlStatement := `INSERT INTO clients (name, email, passowrd) VALUES ( $1, $2,$3);`
+	fmt.Println("[RegisterUser] Saving user data ..")
+	_, err := db.Exec(sqlStatement, name, email, password)
+	if err != nil {
+		log.Println(err)
+	} else {
+		fmt.Println("[RegisterUser] Success")
 	}
 
-	publisher.SetLinger(0)
-	defer publisher.Close()
+	return true
+}
+func loginUser(name string, password string, db *sql.DB) bool {
+	sqlStatement := `SELECT * FROM clients WHERE email=$1 and passowrd=$2;`
 
-	publisher.Bind("tcp://127.0.0.1:8092")
+	var clientID int
+	var clientName, clientEmail, clientPassword string
 
-	for {
-		s, err := subscriber.Recv(0)
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-		fmt.Println("[ClientSubscriber] rec", s[0:6])
-
-		if strings.Compare(s[0:6], "INSERT") == 0 {
-			ExecuteQuery(s[7:len(s)], db)
-
-			for i := range BeatStamp {
-				delay := time.Now().Sub(BeatStamp[i]) / 1000000000
-				if delay > 4 {
-					fmt.Println("[ClientSubscriber] Slave[" + strconv.Itoa(i) + "] Disqualified for been away")
-				} else {
-					InsertionsStack[i] = append(InsertionsStack[i], s[7:len(s)])
-					fmt.Println("[ClientSubscriber] Adding InsertionQuery to slave ["+strconv.Itoa(i)+"]  :", s[7:len(s)])
-				}
-
-			}
-		} else {
-
-			for i := range BeatStamp {
-				delay := time.Now().Sub(BeatStamp[i]) / 1000000000
-				if delay > 4 {
-					fmt.Println("[ClientSubscriber] Slave[" + strconv.Itoa(i) + "] Disqualified for been away")
-				} else {
-					fmt.Println("[ClientSubscriber] Assigning ReadQuery to slave ["+strconv.Itoa(i)+"]  :", s)
-					publisher.Send("tcp://127.0.0.1:600"+strconv.Itoa(1+i), 0)
-					break
-				}
-
-			}
-		}
+	row := db.QueryRow(sqlStatement, name, password)
+	switch err := row.Scan(&clientID, &clientName, &clientEmail, &clientPassword); err {
+	case sql.ErrNoRows:
+		return false
+	case nil:
+		return true
+	default:
+		panic(err)
 
 	}
 }
 
-//ListenToHeartBeat :
-func ListenToHeartBeat(InsertionsStack [][]string, id int, BeatStamp []time.Time) {
+func getOnlineSlaves(BeatStamps []time.Time) []int {
+	onlineSlaves := make([]int, 0)
 
-	subscriber, _ := zmq4.NewSocket(zmq4.SUB)
-	subscriber.SetLinger(0)
-	defer subscriber.Close()
-
-	publisher, _ := zmq4.NewSocket(zmq4.PUB)
-	publisher.SetLinger(0)
-	defer publisher.Close()
-
-	subscriber.Connect("tcp://127.0.0.1:300" + strconv.Itoa(id+1))
-	subscriber.SetSubscribe("")
-
-	publisher.Bind("tcp://127.0.0.1:500" + strconv.Itoa(id+1))
-	for {
-		s, err := subscriber.Recv(0)
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-		fmt.Println("[SlaveSubscriber] rec", s)
-		BeatStamp[id] = time.Now()
-		stackSize := len(InsertionsStack[id])
-
-		if stackSize > 0 {
-			fmt.Println("[HeartBeatSubscriber] Updating slave[" + strconv.Itoa(id) + "] :  ")
-
-			for i := range InsertionsStack[id] {
-				fmt.Println("[HeartBeatSubscriber] Sending Query[" + strconv.Itoa(id) + "] : " + InsertionsStack[id][i])
-				publisher.Send(InsertionsStack[id][i], 0)
-			}
-			InsertionsStack[id] = InsertionsStack[id][:0]
+	for i := range BeatStamps {
+		delay := time.Now().Sub(BeatStamps[i]) / 1000000000
+		if delay > 4 {
+			fmt.Println("[OnlineSlavesFetcher] Slave[" + strconv.Itoa(i) + "] Disqualified for been away(+4 seconds)")
 		} else {
-			fmt.Println("[HeartBeatSubscriber] Slave[" + strconv.Itoa(id) + "] is up to date")
+			onlineSlaves = append(onlineSlaves, i)
 		}
 
 	}
+	return onlineSlaves
 }
 
 func connectDB() *sql.DB {
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("[DB] Error loading .env file")
+		log.Fatal("[DB]Error loading .env file")
 	}
 
 	host := os.Getenv("HOST")
@@ -147,28 +128,117 @@ func connectDB() *sql.DB {
 	return db
 }
 
-// ExecuteQuery ;
-func ExecuteQuery(sqlStatement string, db *sql.DB) {
+//======================= Common Functions ==================
 
-	_, err := db.Exec(sqlStatement)
-	if err != nil {
-		log.Println(err)
-	} else {
-		fmt.Println("[DB] Successfully Executed!")
+//ListenToClientReq :
+func ListenToClientReq(InsertionsStack [][]string, BeatStamp []time.Time, slaveIPs []string, clientIP string) {
+	db := connectDB()
+	defer db.Close()
+
+	clientSubscriber := initSubscriber(clientIP + "9092")
+
+	defer clientSubscriber.Close()
+
+	clientPublisher := initPublisher(clientIP + "8092")
+
+	defer clientPublisher.Close()
+
+	for {
+		s, err := clientSubscriber.Recv(0)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+
+		commandType, commandData := commandDeseralizer(s)
+		fmt.Println("[ClientSubscriber] rec", commandType)
+
+		if commandType == "" {
+			fmt.Println("[ClientSubscriber] Dropping Message as invalid :" + s)
+			continue
+		}
+
+		onlineSlaves := getOnlineSlaves(BeatStamp)
+		rand.Seed(time.Now().Unix())
+		chosenSlave := -1
+
+		if len(onlineSlaves) > 0 {
+			chosenSlave = onlineSlaves[rand.Intn(len(onlineSlaves))]
+		}
+
+		if strings.Compare(commandType, "REGISTER") == 0 {
+			fmt.Println("[ClientSubscriber] Sending Command Data to DB Execution Layer")
+			name, email, password := commandDataDeseralizer(commandData)
+			registerUser(name, email, password, db)
+			fmt.Println("[ClientSubscriber] Adding InsertionQuery to all slaves :", commandData)
+
+			for i := range InsertionsStack {
+				InsertionsStack[i] = append(InsertionsStack[i], commandData)
+			}
+
+		} else if strings.Compare(commandType, "LOGIN") == 0 {
+			if chosenSlave != -1 {
+				fmt.Println("[ClientSubscriber] Assigning ReadQuery to slave ["+strconv.Itoa(chosenSlave)+"]  :", s)
+				clientPublisher.Send(strconv.Itoa(1+chosenSlave), 0)
+			}
+
+		}
+
 	}
-
 }
+
+//ListenToHeartBeat :
+func ListenToHeartBeat(InsertionsStack [][]string, id int, BeatStamp []time.Time, slaveIP string) {
+
+	slaveSubscriber := initSubscriber(slaveIP + "300" + strconv.Itoa(id+1))
+	defer slaveSubscriber.Close()
+	slavePublisher := initPublisher(slaveIP + "500" + strconv.Itoa(id+1))
+
+	defer slavePublisher.Close()
+
+	for {
+		s, err := slaveSubscriber.Recv(0)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		fmt.Println("[SlaveSubscriber] rec", s)
+		BeatStamp[id] = time.Now()
+		stackSize := len(InsertionsStack[id])
+
+		if stackSize > 0 {
+			fmt.Println("[HeartBeatSubscriber] Updating slave[" + strconv.Itoa(id) + "] :  ")
+
+			for i := range InsertionsStack[id] {
+				fmt.Println("[HeartBeatSubscriber] Sending Query[" + strconv.Itoa(id) + "] : " + InsertionsStack[id][i])
+				fmt.Println("[DEBUG]" + slaveIP + "500" + strconv.Itoa(id+1))
+				slavePublisher.Send(InsertionsStack[id][i], 0)
+			}
+			InsertionsStack[id] = InsertionsStack[id][:0]
+		} else {
+			fmt.Println("[HeartBeatSubscriber] Slave[" + strconv.Itoa(id) + "] is up to date")
+		}
+
+	}
+}
+
 func main() {
 	InsertionsStack := make([][]string, 3)
 	BeatStamp := make([]time.Time, 3)
+	slaves := make([]string, 3)
+	clientIP := "tcp://127.0.0.1:"
+	fmt.Println()
+	for i := range slaves {
+		slaves[i] = "tcp://127.0.0.1:"
+	}
 
 	for i := range InsertionsStack {
 		InsertionsStack[i] = make([]string, 0)
 	}
-	go ListenToClientReq(InsertionsStack, BeatStamp)
-	go ListenToHeartBeat(InsertionsStack, 0, BeatStamp)
-	go ListenToHeartBeat(InsertionsStack, 1, BeatStamp)
-	go ListenToHeartBeat(InsertionsStack, 2, BeatStamp)
+	go ListenToClientReq(InsertionsStack, BeatStamp, slaves, clientIP)
+	for i := range slaves {
+		go ListenToHeartBeat(InsertionsStack, i, BeatStamp, slaves[i])
+	}
 
 	for {
 
