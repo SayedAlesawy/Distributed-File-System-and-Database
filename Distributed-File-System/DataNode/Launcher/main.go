@@ -29,11 +29,13 @@ func launchDataNodes(launcherID string, launcherPort string) {
 	log.Println(datanode.LogSignL, "Launching Data Nodes Processes")
 
 	dataNodePorts := []string{launcherPort + "1", launcherPort + "2"}
+	dataNodeReqPorts := []string{launcherPort + "3", launcherPort + "4"}
 
 	path := "../DNLauncher/main.go"
 
 	for i := 0; i < 2; i++ {
-		params := getTrackerParams() + " " + dataNodeLauncherIP + " " + launcherID + " " + dataNodePorts[i]
+		params := getTrackerParams() + " " + dataNodeLauncherIP + " " + launcherID + " " +
+			dataNodePorts[i] + " " + dataNodeReqPorts[i]
 		command := "go run " + path + " " + params
 
 		cmd := exec.Command("gnome-terminal", "--title=DataNode"+launcherID, "-e", command)
@@ -68,7 +70,7 @@ func main() {
 	dataNodeLauncherID, _ := strconv.Atoi(args[1])
 	dataNodeLauncherPort := args[2] //Sent to the tracker as handshake
 
-	dataNodeObj := datanode.NewDataNode(dataNodeLauncherID, dataNodeLauncherIP, dataNodeLauncherPort+"0",
+	dataNodeObj := datanode.NewDataNode(dataNodeLauncherID, dataNodeLauncherIP, dataNodeLauncherPort+"0", "",
 		trackerIP, trackerDNPorts)
 
 	dataNodeLauncherObj := datanode.NewDataNodeLauncher(dataNodeObj, heartbeatInterval, dataNodeLauncherPort+"0",

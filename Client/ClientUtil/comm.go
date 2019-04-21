@@ -77,6 +77,54 @@ func (clientObj *client) ReceiveResponse() string {
 	return response
 }
 
+// RSendRequestToDN ..
+func (clientObj *client) RSendRequestToDN(dnIP string, dnReqPort string, request Request) {
+	socket, _ := zmq4.NewSocket(zmq4.REQ)
+	defer socket.Close()
+
+	connectionString := "tcp://" + dnIP + ":" + dnReqPort
+
+	socket.Connect(connectionString)
+	acknowledge := ""
+	serializedRequest := SerializeRequest(request)
+
+	log.Printf("[Client #%d] Resending request to DataNode\n", clientObj.id)
+
+	socket.Send(serializedRequest, 0)
+
+	acknowledge, _ = socket.Recv(0)
+
+	if acknowledge != "ACK" {
+		log.Printf("[Client #%d] Failed to re-send request to DataNode\n", clientObj.id)
+	} else {
+		log.Printf("[Client #%d] Successfully re-sent request to Data Node\n", clientObj.id)
+	}
+}
+
+// SendData ..
+func (clientObj *client) SendData(dnIP string, dnDataPort string) {
+	socket, _ := zmq4.NewSocket(zmq4.REQ)
+	defer socket.Close()
+
+	connectionString := "tcp://" + dnIP + ":" + dnDataPort
+
+	socket.Connect(connectionString)
+	acknowledge := ""
+	data := "Consider this is a very long piece of data but I am just so lazy to make it so"
+
+	log.Printf("[Client #%d] Sending data to DataNode\n", clientObj.id)
+
+	socket.Send(data, 0)
+
+	acknowledge, _ = socket.Recv(0)
+
+	if acknowledge != "ACK" {
+		log.Printf("[Client #%d] Failed to send data to DataNode\n", clientObj.id)
+	} else {
+		log.Printf("[Client #%d] Successfully sent data to Data Node\n", clientObj.id)
+	}
+}
+
 func (clientObj *client) CloseConnection() {
 	clientObj.socket.Close()
 }

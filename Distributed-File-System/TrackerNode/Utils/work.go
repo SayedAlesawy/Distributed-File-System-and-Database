@@ -27,7 +27,6 @@ func (trackerNodeObj *trackerNode) ListenToClientRequests() {
 
 			log.Println(LogSignTR, "#", trackerNodeObj.id, "Received request from client#", deserializedRequest.ClientID)
 
-			//client.PrintRequest(deserializedRequest)
 			go trackerNodeObj.handleRequest(deserializedRequest)
 		}
 	}
@@ -37,7 +36,6 @@ func (trackerNodeObj *trackerNode) handleRequest(request client.Request) {
 	if request.Type == client.Download {
 		//Call download request handler
 	} else if request.Type == client.Upload {
-		//Call upload request handler
 		trackerNodeObj.uploadRequestHandler(request)
 	} else if request.Type == client.Display {
 		//Call display request handler
@@ -52,7 +50,7 @@ func (trackerNodeObj *trackerNode) uploadRequestHandler(request client.Request) 
 	//And I will always pick it
 	log.Println(LogSignTR, "#", trackerNodeObj.id, "Upload Request Handler Started")
 
-	dataNodeConnectionString := "127.0.0.1" + ":" + "7001"
+	dataNodeConnectionString := "127.0.0.1" + " " + "7001" + " " + "7003"
 
-	trackerNodeObj.sendDataNodePortToClient(request, dataNodeConnectionString)
+	trackerNodeObj.sendDataNodePortsToClient(request, dataNodeConnectionString)
 }

@@ -88,8 +88,8 @@ func (trackerNodeLauncherObj *trackerNodeLauncher) ReceiveHandshake(HBIPsMutex *
 	}
 }
 
-// sendDataNodePortToClient A function send a data node connection string to client
-func (trackerNodeObj *trackerNode) sendDataNodePortToClient(request client.Request, dataNodeConnectionString string) {
+// sendDataNodePortsToClient A function send a data node connection string to client
+func (trackerNodeObj *trackerNode) sendDataNodePortsToClient(request client.Request, dataNodeConnectionString string) {
 	socket, _ := zmq4.NewSocket(zmq4.REQ)
 	defer socket.Close()
 
@@ -100,7 +100,7 @@ func (trackerNodeObj *trackerNode) sendDataNodePortToClient(request client.Reque
 	acknowledge := ""
 
 	for acknowledge != "ACK" {
-		log.Println(LogSignTR, trackerNodeObj.id, "Responding to reqest#", request.ID, "from Client #", request.ClientID)
+		log.Println(LogSignTR, trackerNodeObj.id, "Responding to request#", request.ID, "from Client #", request.ClientID)
 
 		socket.Send(dataNodeConnectionString, 0)
 

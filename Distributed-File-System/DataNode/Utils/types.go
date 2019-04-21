@@ -16,7 +16,8 @@ const LogSignDN string = "[Data Node]"
 type dataNode struct {
 	id           int      //A unique ID for the current machine
 	ip           string   //The IP of the current machine
-	port         string   //The port the Tracker uses to route client requests
+	port         string   //The port the Tracker uses to route client requests [Receive data here]
+	reqPort      string   //Receive routed requests here
 	trackerIP    string   //The IP of the tracker machine
 	trackerPorts []string //The ports of the tracker machine (processes)
 }
@@ -32,11 +33,12 @@ type dataNodeLauncher struct {
 }
 
 // NewDataNode A constructor function for the dataNode type
-func NewDataNode(_id int, _ip string, _port string, _trackerIP string, _trackerPorts []string) dataNode {
+func NewDataNode(_id int, _ip string, _port string, _reqPort string, _trackerIP string, _trackerPorts []string) dataNode {
 	dataNodeObj := dataNode{
 		id:           _id,
 		ip:           _ip,
 		port:         _port,
+		reqPort:      _reqPort,
 		trackerIP:    _trackerIP,
 		trackerPorts: _trackerPorts,
 	}

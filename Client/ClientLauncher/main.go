@@ -4,6 +4,7 @@ import (
 	client "Distributed-Video-Processing-Cluster/Client/ClientUtil"
 	"fmt"
 	"log"
+	"strings"
 )
 
 func main() {
@@ -61,6 +62,12 @@ func main() {
 		response := clientObj.ReceiveResponse()
 
 		log.Println("[Client #]", clientID, "Received this:", response)
+
+		arr := strings.Fields(response)
+
+		clientObj.RSendRequestToDN(arr[0], arr[2], requestObj)
+
+		clientObj.SendData(arr[0], arr[1])
 
 		requestID++
 	}

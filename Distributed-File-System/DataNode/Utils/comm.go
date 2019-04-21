@@ -1,6 +1,7 @@
 package datanode
 
 import (
+	client "Distributed-Video-Processing-Cluster/Client/ClientUtil"
 	"log"
 
 	"github.com/pebbe/zmq4"
@@ -53,4 +54,26 @@ func (dataNodeLauncherObj dataNodeLauncher) SendHandshake(handshake string) {
 	}
 
 	log.Println(LogSignL, dataNodeLauncherObj.dataNode.id, "Successfully connected to Tracker")
+}
+
+func (datanodeObj *dataNode) receiveDataFromClient(requst client.Request) {
+	socket, _ := zmq4.NewSocket(zmq4.REP)
+	defer socket.Close()
+
+	connectionString := "tcp://" + datanodeObj.ip + ":" + datanodeObj.port
+
+	socket.Bind(connectionString)
+	acknowledge := "ACK"
+
+	data, _ := socket.Recv(0)
+
+	if data != "" {
+		socket.Send(acknowledge, 0)
+
+		log.Println(LogSignDN, "#", datanodeObj.id, "Received data")
+		log.Println("Data:", data)
+		log.Println("From client #", requst.ClientID)
+	}
+
+	log.Println(LogSignDN, "#", datanodeObj.id, "Finished serving request")
 }
