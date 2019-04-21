@@ -67,7 +67,7 @@ func main() {
 
 		clientObj.RSendRequestToDN(arr[0], arr[2], requestObj)
 
-		clientObj.SendData(arr[0], arr[1])
+		clientObj.SendData(requestObj, arr[0], arr[1])
 
 		requestID++
 	}

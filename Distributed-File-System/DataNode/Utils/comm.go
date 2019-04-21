@@ -2,7 +2,9 @@ package datanode
 
 import (
 	client "Distributed-Video-Processing-Cluster/Client/ClientUtil"
+	fileutils "Distributed-Video-Processing-Cluster/Distributed-File-System/FileUtils"
 	"log"
+	"strconv"
 
 	"github.com/pebbe/zmq4"
 )
@@ -56,23 +58,57 @@ func (dataNodeLauncherObj dataNodeLauncher) SendHandshake(handshake string) {
 	log.Println(LogSignL, dataNodeLauncherObj.dataNode.id, "Successfully connected to Tracker")
 }
 
-func (datanodeObj *dataNode) receiveDataFromClient(requst client.Request) {
+// receiveChunkCount A function to recieve the chunk count of a file
+func (datanodeObj *dataNode) receiveChunkCount(socket *zmq4.Socket) (int, bool) {
+	chunkCount, _ := socket.Recv(0)
+	acknowledge := "ACK"
+
+	socket.Send(acknowledge, 0)
+
+	ret, _ := strconv.Atoi(chunkCount)
+
+	if chunkCount != "" {
+		log.Println(LogSignDN, "#", datanodeObj.id, "Received chunk count")
+
+		return ret, true
+	}
+
+	return ret, false
+}
+
+// receiveChunk A function to recieve a chunk of data
+func (datanodeObj *dataNode) receiveChunk(socket *zmq4.Socket) ([]byte, bool) {
+	chunk, err := socket.RecvBytes(0)
+	acknowledge := "ACK"
+
+	socket.Send(acknowledge, 0)
+
+	if err == nil {
+		log.Println(LogSignDN, "#", datanodeObj.id, "Received chunk")
+
+		return chunk, true
+	}
+
+	return chunk, false
+}
+
+func (datanodeObj *dataNode) receiveDataFromClient(request client.Request) {
 	socket, _ := zmq4.NewSocket(zmq4.REP)
 	defer socket.Close()
 
 	connectionString := "tcp://" + datanodeObj.ip + ":" + datanodeObj.port
-
 	socket.Bind(connectionString)
-	acknowledge := "ACK"
 
-	data, _ := socket.Recv(0)
+	file := fileutils.CreateFile(request.FileName)
+	defer file.Close()
 
-	if data != "" {
-		socket.Send(acknowledge, 0)
+	//Receive the chunks count
+	chunkCount, _ := datanodeObj.receiveChunkCount(socket)
 
-		log.Println(LogSignDN, "#", datanodeObj.id, "Received data")
-		log.Println("Data:", data)
-		log.Println("From client #", requst.ClientID)
+	for i := 0; i < chunkCount; i++ {
+		chunk, _ := datanodeObj.receiveChunk(socket)
+
+		fileutils.WriteChunk(file, chunk)
 	}
 
 	log.Println(LogSignDN, "#", datanodeObj.id, "Finished serving request")

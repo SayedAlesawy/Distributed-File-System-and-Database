@@ -36,3 +36,6 @@ The lanucher process in the Data Node module spwans 2 types of processes:
     ```
     - Port 7000 for the launcher Data Node
     - Ports 7001 and 7002 for the Side Data Node processes.
+
+# Testing Data Set
+The testing data set can be found [here](https://drive.google.com/drive/folders/1pEVD85lamr6kkhFnDCPDCZFO5JPk7Ajd?usp=sharing)

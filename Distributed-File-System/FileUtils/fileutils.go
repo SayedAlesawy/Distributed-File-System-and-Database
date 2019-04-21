@@ -9,6 +9,9 @@ import (
 // LogSign Used in logging FileUtil errors
 const LogSign string = "[File]"
 
+// ChunkSize The chunk size for reading and sending files
+const ChunkSize int64 = 1024 * 1024
+
 // logErr A function to log the error message
 func logErr(err error) {
 	if err != nil {
@@ -40,20 +43,36 @@ func OpenFile(fileName string) *os.File {
 	return file
 }
 
+// GetFileSize A function to return the file size in bytes
+func GetFileSize(fileName string) int64 {
+	fileInfo, err := os.Stat(fileName)
+	logErr(err)
+
+	return fileInfo.Size()
+}
+
+// GetChunksCount A function to get the number of chunks in a file
+func GetChunksCount(fileName string) int {
+	fileSize := GetFileSize(fileName)
+	chunksCount := (fileSize + ChunkSize - 1) / ChunkSize
+
+	return int(chunksCount)
+}
+
 // ReadChunk A function to read chunkSize bytes of a file from the previous position
-func ReadChunk(file *os.File, chunkSize int) ([]byte, int, bool) {
-	byteSlice := make([]byte, chunkSize)
-	bytesRead, err := file.Read(byteSlice)
+func ReadChunk(file *os.File) ([]byte, int, bool) {
+	buffer := make([]byte, ChunkSize)
+	size, err := file.Read(buffer)
 
 	done := isDone(err)
 
-	return byteSlice, bytesRead, done
+	return buffer, size, done
 }
 
 // WriteChunk A function to write chunkSize bytes to a file
 func WriteChunk(file *os.File, chunk []byte) int {
-	bytesWritten, err := file.Write(chunk)
+	size, err := file.Write(chunk)
 	logErr(err)
 
-	return bytesWritten
+	return size
 }

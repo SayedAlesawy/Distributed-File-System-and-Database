@@ -1,7 +1,9 @@
 package client
 
 import (
+	fileutils "Distributed-Video-Processing-Cluster/Distributed-File-System/FileUtils"
 	"log"
+	"strconv"
 
 	"github.com/pebbe/zmq4"
 )
@@ -101,28 +103,65 @@ func (clientObj *client) RSendRequestToDN(dnIP string, dnReqPort string, request
 	}
 }
 
+// sendChunkCount A function to send the chunk count to the data node
+func (clientObj *client) sendChunkCount(socket *zmq4.Socket, chunksCount int) {
+	log.Printf("[Client #%d] Sending chunks count to DataNode\n", clientObj.id)
+
+	socket.Send(strconv.Itoa(chunksCount), 0)
+
+	acknowledge, _ := socket.Recv(0)
+
+	if acknowledge != "ACK" {
+		log.Printf("[Client #%d] Failed to send chunk count to DataNode\n", clientObj.id)
+		return
+	}
+
+	log.Printf("[Client #%d] Successfully sent chunk count to Data Node\n", clientObj.id)
+}
+
+func (clientObj *client) sendDataChunk(socket *zmq4.Socket, data []byte, chunkID int) {
+	log.Printf("[Client #%d] Sending chunk to DataNode\n", clientObj.id)
+
+	socket.SendBytes(data, 0)
+
+	acknowledge, _ := socket.Recv(0)
+
+	if acknowledge != "ACK" {
+		log.Printf("[Client #%d] Failed to send chunk #%d to DataNode\n", clientObj.id, chunkID)
+		return
+	}
+
+	log.Printf("[Client #%d] Successfully sent chunk #%d to Data Node\n", clientObj.id, chunkID)
+}
+
 // SendData ..
-func (clientObj *client) SendData(dnIP string, dnDataPort string) {
+func (clientObj *client) SendData(request Request, dnIP string, dnDataPort string) {
 	socket, _ := zmq4.NewSocket(zmq4.REQ)
 	defer socket.Close()
 
 	connectionString := "tcp://" + dnIP + ":" + dnDataPort
-
 	socket.Connect(connectionString)
-	acknowledge := ""
-	data := "Consider this is a very long piece of data but I am just so lazy to make it so"
 
-	log.Printf("[Client #%d] Sending data to DataNode\n", clientObj.id)
+	file := fileutils.OpenFile(request.FileName)
+	defer file.Close()
 
-	socket.Send(data, 0)
+	chunksCount := fileutils.GetChunksCount(request.FileName)
 
-	acknowledge, _ = socket.Recv(0)
+	//Send the chunksCount to the DataNode
+	clientObj.sendChunkCount(socket, chunksCount)
 
-	if acknowledge != "ACK" {
-		log.Printf("[Client #%d] Failed to send data to DataNode\n", clientObj.id)
-	} else {
-		log.Printf("[Client #%d] Successfully sent data to Data Node\n", clientObj.id)
+	//Send the actual chunks of data
+	for i := 0; i < chunksCount; i++ {
+		chunk, size, done := fileutils.ReadChunk(file)
+
+		if done == true {
+			break
+		}
+
+		clientObj.sendDataChunk(socket, chunk[:size], i+1)
 	}
+
+	log.Printf("[Client #%d] Successfully sent data to Data Node\n", clientObj.id)
 }
 
 func (clientObj *client) CloseConnection() {
