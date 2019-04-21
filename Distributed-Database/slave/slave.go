@@ -71,7 +71,8 @@ func loginUser(name string, password string, db *sql.DB) bool {
 	case nil:
 		return true
 	default:
-		panic(err)
+		fmt.Println(err)
+		return false
 
 	}
 }

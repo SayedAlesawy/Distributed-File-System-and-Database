@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"log"
+	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/pebbe/zmq4"
@@ -54,9 +57,33 @@ func main() {
 	defer publisher.Close()
 
 	go AssignedSlaveListner()
+	reader := bufio.NewReader(os.Stdin)
 
 	for range time.Tick(time.Second) {
-		publisher.Send("LOGIN:kareem;k@mail.com;12345678", 0)
-		fmt.Println("[MainThread]", "REGISTER:kareem;k@mail.com;12345678")
+		fmt.Print("LOGIN/REGISTER?(L/R)")
+		command, _ := reader.ReadString('\n')
+		if strings.Compare(command, "R\n") == 0 {
+			fmt.Println("ENTER REGISTER USER INFORMATION")
+			fmt.Print("name :")
+			name, _ := reader.ReadString('\n')
+			fmt.Print("email :")
+			email, _ := reader.ReadString('\n')
+			fmt.Print("password :")
+			password, _ := reader.ReadString('\n')
+
+			publisher.Send("LOGIN:"+name+";"+email+";"+password, 0)
+			fmt.Println("[MainThread]", "REGISTER:"+name+";"+email+";"+password)
+
+		} else {
+			fmt.Println("ENTER LOGIN USER INFORMATION")
+			fmt.Print("email :")
+			email, _ := reader.ReadString('\n')
+			fmt.Print("password :")
+			password, _ := reader.ReadString('\n')
+
+			publisher.Send("LOGIN:"+email+";"+password, 0)
+			fmt.Println("[MainThread]", "LOGIN:"+email+";"+password)
+		}
+
 	}
 }
