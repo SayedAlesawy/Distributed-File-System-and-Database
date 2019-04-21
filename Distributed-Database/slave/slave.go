@@ -29,6 +29,7 @@ func ReadQueryListner(status *string, db *sql.DB, id int) {
 			continue
 		}
 		fmt.Println("[ReadQueryListner] rec", s)
+		db.Query(s)
 
 	}
 }

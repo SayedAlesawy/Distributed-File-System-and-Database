@@ -54,7 +54,7 @@ func main() {
 	go AssignedSlaveListner()
 
 	for range time.Tick(time.Second) {
-		publisher.Send("INSERT:INSERT INTO TABLE", 0)
-		log.Println("send", "INSERT:INSERT INTO TABLE")
+		publisher.Send("REGISTER:kareem;k@mail.com;12345678", 0)
+		fmt.Println("[MainThread]", "REGISTER:kareem;k@mail.com;12345678")
 	}
 }
