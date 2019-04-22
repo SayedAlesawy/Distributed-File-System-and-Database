@@ -84,6 +84,13 @@ func RecvBytes(socket *zmq4.Socket) ([]byte, bool) {
 	return data, status
 }
 
+// GetConnectionString A function to formulate the connection string given IP and Port
+func GetConnectionString(ip string, port string) string {
+	connectionString := "tcp://" + ip + ":" + port
+
+	return connectionString
+}
+
 // isOkay A function to check if there is an error
 func isOkay(err error) bool {
 	if err == nil {

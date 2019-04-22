@@ -2,31 +2,30 @@ package datanode
 
 import (
 	client "Distributed-Video-Processing-Cluster/Client/ClientUtil"
-	"log"
+	comm "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Comm"
+	logger "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Log"
+	"fmt"
 
 	"github.com/pebbe/zmq4"
 )
 
 // ListenToClients A function to listen to requests from clients
 func (datanodeObj *dataNode) ListenToClients() {
-	socket, _ := zmq4.NewSocket(zmq4.REP)
+	socket, ok := comm.Init(zmq4.REP, "")
 	defer socket.Close()
+	logger.LogFail(ok, LogSignDN, datanodeObj.id, "ListenToClients(): Failed to acquire response socket")
 
-	connectionString := "tcp://" + datanodeObj.ip + ":" + datanodeObj.reqPort
-
-	socket.Bind(connectionString)
-	acknowledge := "ACK"
+	connectionString := []string{comm.GetConnectionString(datanodeObj.ip, datanodeObj.reqPort)}
+	comm.Bind(socket, connectionString)
 
 	for {
-		serializedRequest, _ := socket.Recv(0)
+		serializedRequest, recvStatus := comm.RecvString(socket)
 
-		if serializedRequest != "" {
+		if recvStatus == true {
 			deserializedRequest := client.DeserializeRequest(serializedRequest)
 
-			socket.Send(acknowledge, 0)
-
-			log.Println(LogSignDN, "#", datanodeObj.id, "Received request of type",
-				deserializedRequest.Type, "from client#", deserializedRequest.ClientID)
+			logMsg := fmt.Sprintf("Received [%s] request from client#%d", deserializedRequest.Type, deserializedRequest.ClientID)
+			logger.LogMsg(LogSignDN, datanodeObj.id, logMsg)
 
 			go datanodeObj.handleRequest(deserializedRequest)
 		}
@@ -44,7 +43,7 @@ func (datanodeObj *dataNode) handleRequest(request client.Request) {
 }
 
 func (datanodeObj *dataNode) uploadRequestHandler(request client.Request) {
-	log.Println(LogSignDN, "#", datanodeObj.id, "Upload Request Handler Started")
+	logger.LogMsg(LogSignDN, datanodeObj.id, "Upload Request Handler Started")
 
 	datanodeObj.receiveDataFromClient(request)
 }

@@ -48,7 +48,8 @@ func main() {
 
 		log.Println("Client", "File name = ")
 		fmt.Scanf("%s", &fileName)
-
+		//TODO handle file not found before sending requests to datanode and maybe before sending
+		//to tracker 7ata
 		requestObj := client.Request{
 			ID:         requestID,
 			ClientID:   clientID,

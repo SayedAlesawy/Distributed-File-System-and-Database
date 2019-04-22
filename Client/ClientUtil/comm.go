@@ -1,7 +1,7 @@
 package client
 
 import (
-	fileutils "Distributed-Video-Processing-Cluster/Distributed-File-System/FileUtils"
+	fileutils "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/File"
 	"log"
 	"strconv"
 

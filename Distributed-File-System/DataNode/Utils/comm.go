@@ -2,114 +2,99 @@ package datanode
 
 import (
 	client "Distributed-Video-Processing-Cluster/Client/ClientUtil"
-	fileutils "Distributed-Video-Processing-Cluster/Distributed-File-System/FileUtils"
-	"log"
+	comm "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Comm"
+	fileutils "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/File"
+	logger "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Log"
+	"fmt"
 	"strconv"
 
 	"github.com/pebbe/zmq4"
 )
 
-// getPublisherSocket A function to obtain a publisher socket
-func (dataNodeLauncherObj *dataNodeLauncher) getPublisherSocket() {
-	publisher, err := zmq4.NewSocket(zmq4.PUB)
-
-	if err != nil {
-		log.Println(LogSignL, dataNodeLauncherObj.dataNode.id, "Failed to acquire Publisher Socket")
-		return
-	}
-
-	dataNodeLauncherObj.publisherSocket = publisher
-}
-
 // EstablishPublisherConnection A function to establish a TCP connection for publishing heartbeats
 func (dataNodeLauncherObj *dataNodeLauncher) establishPublisherConnection() {
-	dataNodeLauncherObj.getPublisherSocket()
+	publisher, ok := comm.Init(zmq4.PUB, "")
+	dataNodeLauncherObj.publisherSocket = publisher
+	logger.LogFail(ok, LogSignL, dataNodeLauncherObj.id, "establishPublisherConnection(): Failed to acquire Publisher Socket")
 
-	dataNodeLauncherObj.publisherSocket.SetLinger(0)
+	var connectionString = []string{comm.GetConnectionString(dataNodeLauncherObj.dataNode.ip, dataNodeLauncherObj.heartbeatPort)}
+	comm.Connect(dataNodeLauncherObj.publisherSocket, connectionString)
 
-	connectionString := "tcp://" + dataNodeLauncherObj.dataNode.ip + ":" + dataNodeLauncherObj.heartbeatPort
-
-	dataNodeLauncherObj.publisherSocket.Bind(connectionString)
+	comm.Bind(dataNodeLauncherObj.publisherSocket, connectionString)
 }
 
 // SendHandshake A function the datanode launcher uses to send the IPs and the ID of all 3 processes (HB and normal DNs (client ports))
 func (dataNodeLauncherObj dataNodeLauncher) SendHandshake(handshake string) {
-	socket, _ := zmq4.NewSocket(zmq4.REQ)
+	socket, ok := comm.Init(zmq4.REQ, "")
 	defer socket.Close()
+	logger.LogFail(ok, LogSignL, dataNodeLauncherObj.id, "SendHandshake(): Failed to acquire request Socket")
 
-	connectionString := "tcp://" + dataNodeLauncherObj.dataNode.trackerIP + ":" + dataNodeLauncherObj.trackerIPsPort
+	var connectionString = []string{comm.GetConnectionString(dataNodeLauncherObj.dataNode.trackerIP, dataNodeLauncherObj.trackerIPsPort)}
+	comm.Connect(socket, connectionString)
 
-	socket.Connect(connectionString)
+	sendStatus := false
 
-	acknowledge := ""
+	for sendStatus != true {
+		logger.LogMsg(LogSignL, dataNodeLauncherObj.dataNode.id, "Sending handshake")
 
-	for acknowledge != "ACK" {
-		log.Println(LogSignL, dataNodeLauncherObj.dataNode.id, "Sending handshake")
-
-		socket.Send(handshake, 0)
-
-		acknowledge, _ = socket.Recv(0)
-
-		if acknowledge != "ACK" {
-			log.Println(LogSignL, dataNodeLauncherObj.dataNode.id, "Failed to connect to Tracker ... Trying again")
-		}
+		sendStatus = comm.SendString(socket, handshake)
+		logger.LogFail(sendStatus, LogSignL, dataNodeLauncherObj.id, "SendHandshake(): Failed to connect to Tracker ... Trying again")
 	}
 
-	log.Println(LogSignL, dataNodeLauncherObj.dataNode.id, "Successfully connected to Tracker")
+	logger.LogMsg(LogSignL, dataNodeLauncherObj.dataNode.id, "Successfully connected to Tracker")
 }
 
 // receiveChunkCount A function to recieve the chunk count of a file
 func (datanodeObj *dataNode) receiveChunkCount(socket *zmq4.Socket) (int, bool) {
-	chunkCount, _ := socket.Recv(0)
-	acknowledge := "ACK"
+	chunkCount, ok := comm.RecvString(socket)
+	logger.LogFail(ok, LogSignDN, datanodeObj.id, "receiveChunkCount(): Error receiving chunk count")
 
-	socket.Send(acknowledge, 0)
+	ret, convErr := strconv.Atoi(chunkCount)
+	logger.LogErr(convErr, LogSignDN, datanodeObj.id, "receiveChunkCount(): Error converting chunk count from string to int")
 
-	ret, _ := strconv.Atoi(chunkCount)
+	logger.LogSuccess(ok, LogSignDN, datanodeObj.id, "Received chunk count")
 
-	if chunkCount != "" {
-		log.Println(LogSignDN, "#", datanodeObj.id, "Received chunk count")
-
-		return ret, true
-	}
-
-	return ret, false
+	return ret, (ok && (convErr == nil))
 }
 
 // receiveChunk A function to recieve a chunk of data
-func (datanodeObj *dataNode) receiveChunk(socket *zmq4.Socket) ([]byte, bool) {
-	chunk, err := socket.RecvBytes(0)
-	acknowledge := "ACK"
+func (datanodeObj *dataNode) receiveChunk(socket *zmq4.Socket, chunkID int) ([]byte, bool) {
+	chunk, ok := comm.RecvBytes(socket)
+	logger.LogFail(ok, LogSignDN, datanodeObj.id, "receiveChunk(): Error receiving chunk")
 
-	socket.Send(acknowledge, 0)
+	logger.LogSuccess(ok, LogSignDN, datanodeObj.id, fmt.Sprintf("Received chunk %d", chunkID))
 
-	if err == nil {
-		log.Println(LogSignDN, "#", datanodeObj.id, "Received chunk")
-
-		return chunk, true
-	}
-
-	return chunk, false
+	return chunk, ok
 }
 
 func (datanodeObj *dataNode) receiveDataFromClient(request client.Request) {
-	socket, _ := zmq4.NewSocket(zmq4.REP)
+	socket, ok := comm.Init(zmq4.REP, "")
 	defer socket.Close()
+	logger.LogFail(ok, LogSignDN, datanodeObj.id, "receiveDataFromClient(): Failed to acquire response Socket")
 
-	connectionString := "tcp://" + datanodeObj.ip + ":" + datanodeObj.port
-	socket.Bind(connectionString)
+	var connectionString = []string{comm.GetConnectionString(datanodeObj.ip, datanodeObj.port)}
+	comm.Bind(socket, connectionString)
 
 	file := fileutils.CreateFile(request.FileName)
 	defer file.Close()
 
-	//Receive the chunks count
-	chunkCount, _ := datanodeObj.receiveChunkCount(socket)
+	chunkCount, chunkCountStatus := datanodeObj.receiveChunkCount(socket)
+
+	if chunkCountStatus == false {
+		logger.LogMsg(LogSignDN, datanodeObj.id, "receiveDataFromClient(): Abort!")
+		return
+	}
 
 	for i := 0; i < chunkCount; i++ {
-		chunk, _ := datanodeObj.receiveChunk(socket)
+		chunk, chunkStatus := datanodeObj.receiveChunk(socket, i+1)
+
+		if chunkStatus == false {
+			logger.LogMsg(LogSignDN, datanodeObj.id, "receiveDataFromClient(): Abort!")
+			return
+		}
 
 		fileutils.WriteChunk(file, chunk)
 	}
 
-	log.Println(LogSignDN, "#", datanodeObj.id, "Finished serving request")
+	logger.LogMsg(LogSignDN, datanodeObj.id, "File received")
 }

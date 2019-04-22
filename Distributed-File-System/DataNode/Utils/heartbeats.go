@@ -1,8 +1,8 @@
 package datanode
 
 import (
+	logger "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Log"
 	"fmt"
-	"log"
 	"time"
 )
 
@@ -17,6 +17,6 @@ func (dataNodeLauncherObj *dataNodeLauncher) SendHeartBeat() {
 
 		dataNodeLauncherObj.publisherSocket.Send(heartbeat, 0)
 
-		log.Println(LogSignL, dataNodeLauncherObj.dataNode.id, "Sent", "Heartbeat")
+		logger.LogMsg(LogSignL, dataNodeLauncherObj.dataNode.id, "Sent Heartbeat")
 	}
 }
