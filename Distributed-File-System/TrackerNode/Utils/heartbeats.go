@@ -1,6 +1,7 @@
 package trackernode
 
 import (
+	comm "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Comm"
 	"log"
 	"strconv"
 	"strings"
@@ -48,7 +49,8 @@ func (trackerNodeLauncherObj *trackerNodeLauncher) UpdateDataNodeAliveStatus(HBI
 			threshold := trackerNodeLauncherObj.disconnectionThreshold
 
 			if diff > threshold {
-				trackerNodeLauncherObj.disconnectSocket(trackerNodeLauncherObj.datanodeHBIPs[id])
+				connection := []string{"tcp://" + trackerNodeLauncherObj.datanodeHBIPs[id]}
+				comm.Disconnect(trackerNodeLauncherObj.subscriberSocket, connection)
 
 				HBIPsMutex.Lock()
 				delete(trackerNodeLauncherObj.datanodeHBIPs, id)

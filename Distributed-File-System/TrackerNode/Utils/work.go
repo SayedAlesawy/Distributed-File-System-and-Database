@@ -2,6 +2,9 @@ package trackernode
 
 import (
 	client "Distributed-Video-Processing-Cluster/Client/ClientUtil"
+	comm "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Comm"
+	logger "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Log"
+	"fmt"
 	"log"
 
 	"github.com/pebbe/zmq4"
@@ -9,23 +12,21 @@ import (
 
 // ListenToClientRequests A function to listen to client requests
 func (trackerNodeObj *trackerNode) ListenToClientRequests() {
-	socket, _ := zmq4.NewSocket(zmq4.REP)
+	socket, ok := comm.Init(zmq4.REP, "")
 	defer socket.Close()
+	logger.LogFail(ok, LogSignTR, trackerNodeObj.id, "ListenToClientRequests(): Failed to acquire response Socket")
 
-	connectionString := "tcp://" + trackerNodeObj.ip + ":" + trackerNodeObj.requestsPort
-
-	socket.Bind(connectionString)
-	acknowledge := "ACK"
+	var connectionString = []string{comm.GetConnectionString(trackerNodeObj.ip, trackerNodeObj.requestsPort)}
+	comm.Bind(socket, connectionString)
 
 	for {
-		serializedRequest, _ := socket.Recv(0)
+		serializedRequest, recvStatus := comm.RecvString(socket)
 
-		if serializedRequest != "" {
+		if recvStatus == true {
 			deserializedRequest := client.DeserializeRequest(serializedRequest)
 
-			socket.Send(acknowledge, 0)
-
-			log.Println(LogSignTR, "#", trackerNodeObj.id, "Received request from client#", deserializedRequest.ClientID)
+			logMsg := fmt.Sprintf("Received request from client#%d", deserializedRequest.ClientID)
+			log.Println(LogSignTR, trackerNodeObj.id, logMsg)
 
 			go trackerNodeObj.handleRequest(deserializedRequest)
 		}
