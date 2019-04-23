@@ -51,7 +51,7 @@ func (trackerNodeObj *trackerNode) uploadRequestHandler(request client.Request) 
 	//And I will always pick it
 	log.Println(LogSignTR, "#", trackerNodeObj.id, "Upload Request Handler Started")
 
-	dataNodeConnectionString := "127.0.0.1" + " " + "7001" + " " + "7003"
+	dataNodeConnectionString := "127.0.0.1" + " " + "7012" + " " + "7011"
 
 	trackerNodeObj.sendDataNodePortsToClient(request, dataNodeConnectionString)
 }
