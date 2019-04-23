@@ -34,8 +34,14 @@ The lanucher process in the Data Node module spwans 2 types of processes:
     - Sending the Data Node machine ID.
     - Sending the heartbeat signals. 
     ```
-    - Port 7000 for the launcher Data Node
-    - Ports 7001 and 7002 for the Side Data Node processes.
+    Here, we use a base port, and based upon we derive the other ports as follows:
+    If the base port of a Data Node machine is 70 for example, then:
+    - Port 7000 for the launcher Data Node (Heart beat).
+    - Ports 7011, 7021 for the request ports.
+    - Ports 7012, 7022 for the upload ports.
+    - Ports 7013, 7023 for the download ports.
+    - Ports 7014, 7024 for the replication upload ports.
+    - Ports 7015, 7025 for the replication download ports.
 
 # Testing Data Set
 The testing data set can be found [here](https://drive.google.com/drive/folders/1pEVD85lamr6kkhFnDCPDCZFO5JPk7Ajd?usp=sharing)
