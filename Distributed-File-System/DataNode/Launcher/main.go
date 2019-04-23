@@ -28,14 +28,17 @@ func getTrackerParams() string {
 func launchDataNodes(launcherID string, launcherPort string) {
 	log.Println(datanode.LogSignL, "Launching Data Nodes Processes")
 
-	dataNodePorts := []string{launcherPort + "1", launcherPort + "2"}
-	dataNodeReqPorts := []string{launcherPort + "3", launcherPort + "4"}
+	reqPorts := []string{launcherPort + "11", launcherPort + "21"}
+	upPorts := []string{launcherPort + "12", launcherPort + "22"}
+	downPorts := []string{launcherPort + "13", launcherPort + "23"}
+	repUpPorts := []string{launcherPort + "14", launcherPort + "24"}
+	repDownPorts := []string{launcherPort + "15", launcherPort + "25"}
 
 	path := "../DNLauncher/main.go"
 
 	for i := 0; i < 2; i++ {
 		params := getTrackerParams() + " " + dataNodeLauncherIP + " " + launcherID + " " +
-			dataNodePorts[i] + " " + dataNodeReqPorts[i]
+			reqPorts[i] + " " + upPorts[i] + " " + downPorts[i] + " " + repUpPorts[i] + " " + repDownPorts[i]
 		command := "go run " + path + " " + params
 
 		cmd := exec.Command("gnome-terminal", "--title=DataNode"+launcherID, "-e", command)
@@ -53,11 +56,7 @@ func launchDataNodes(launcherID string, launcherPort string) {
 }
 
 func getHandshake(launcherID string, launcherPort string) string {
-	hbIP := dataNodeLauncherIP + ":" + launcherPort + "0"
-	dn1IP := dataNodeLauncherIP + ":" + launcherPort + "1"
-	dn2IP := dataNodeLauncherIP + ":" + launcherPort + "2"
-
-	handshake := hbIP + " " + dn1IP + " " + dn2IP + " " + launcherID
+	handshake := dataNodeLauncherIP + " " + launcherID + " " + launcherPort
 
 	return handshake
 }
@@ -70,11 +69,8 @@ func main() {
 	dataNodeLauncherID, _ := strconv.Atoi(args[1])
 	dataNodeLauncherPort := args[2] //Sent to the tracker as handshake
 
-	dataNodeObj := datanode.NewDataNode(dataNodeLauncherID, dataNodeLauncherIP, dataNodeLauncherPort+"0", "",
-		trackerIP, trackerDNPorts)
-
-	dataNodeLauncherObj := datanode.NewDataNodeLauncher(dataNodeObj, heartbeatInterval, dataNodeLauncherPort+"0",
-		trackerIPsPort)
+	dataNodeLauncherObj := datanode.NewDataNodeLauncher(dataNodeLauncherID, dataNodeLauncherIP, trackerIP,
+		heartbeatInterval, dataNodeLauncherPort+"00", trackerIPsPort)
 
 	log.Println(datanode.LogSignL, "#", dataNodeLauncherID, "Successfully launched")
 

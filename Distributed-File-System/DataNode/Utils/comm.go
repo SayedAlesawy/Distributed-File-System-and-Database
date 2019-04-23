@@ -17,7 +17,7 @@ func (dataNodeLauncherObj *dataNodeLauncher) establishPublisherConnection() {
 	dataNodeLauncherObj.publisherSocket = publisher
 	logger.LogFail(ok, LogSignL, dataNodeLauncherObj.id, "establishPublisherConnection(): Failed to acquire Publisher Socket")
 
-	var connectionString = []string{comm.GetConnectionString(dataNodeLauncherObj.dataNode.ip, dataNodeLauncherObj.heartbeatPort)}
+	var connectionString = []string{comm.GetConnectionString(dataNodeLauncherObj.ip, dataNodeLauncherObj.heartbeatPort)}
 	comm.Connect(dataNodeLauncherObj.publisherSocket, connectionString)
 
 	comm.Bind(dataNodeLauncherObj.publisherSocket, connectionString)
@@ -29,19 +29,19 @@ func (dataNodeLauncherObj dataNodeLauncher) SendHandshake(handshake string) {
 	defer socket.Close()
 	logger.LogFail(ok, LogSignL, dataNodeLauncherObj.id, "SendHandshake(): Failed to acquire request Socket")
 
-	var connectionString = []string{comm.GetConnectionString(dataNodeLauncherObj.dataNode.trackerIP, dataNodeLauncherObj.trackerIPsPort)}
+	var connectionString = []string{comm.GetConnectionString(dataNodeLauncherObj.trackerIP, dataNodeLauncherObj.trackerIPsPort)}
 	comm.Connect(socket, connectionString)
 
 	sendStatus := false
 
 	for sendStatus != true {
-		logger.LogMsg(LogSignL, dataNodeLauncherObj.dataNode.id, "Sending handshake")
+		logger.LogMsg(LogSignL, dataNodeLauncherObj.id, "Sending handshake")
 
 		sendStatus = comm.SendString(socket, handshake)
 		logger.LogFail(sendStatus, LogSignL, dataNodeLauncherObj.id, "SendHandshake(): Failed to connect to Tracker ... Trying again")
 	}
 
-	logger.LogMsg(LogSignL, dataNodeLauncherObj.dataNode.id, "Successfully connected to Tracker")
+	logger.LogMsg(LogSignL, dataNodeLauncherObj.id, "Successfully connected to Tracker")
 }
 
 // receiveChunkCount A function to recieve the chunk count of a file
@@ -72,7 +72,7 @@ func (datanodeObj *dataNode) receiveDataFromClient(request client.Request) {
 	defer socket.Close()
 	logger.LogFail(ok, LogSignDN, datanodeObj.id, "receiveDataFromClient(): Failed to acquire response Socket")
 
-	var connectionString = []string{comm.GetConnectionString(datanodeObj.ip, datanodeObj.port)}
+	var connectionString = []string{comm.GetConnectionString(datanodeObj.ip, datanodeObj.upPort)}
 	comm.Bind(socket, connectionString)
 
 	file := fileutils.CreateFile(request.FileName)

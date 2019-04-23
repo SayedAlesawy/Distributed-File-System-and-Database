@@ -24,10 +24,14 @@ func main() {
 	//Data Node Data
 	ip := args[4]
 	id, _ := strconv.Atoi(args[5])
-	dataPort := args[6]
-	reqPort := args[7]
+	reqPort := args[6]
+	upPort := args[7]
+	downPort := args[8]
+	repUpPort := args[9]
+	repDownPort := args[10]
 
-	dataNodeObj := datanode.NewDataNode(id, ip, dataPort, reqPort, trackerIP, trackerDNPorts)
+	dataNodeObj := datanode.NewDataNode(id, ip, reqPort, upPort, downPort,
+		repUpPort, repDownPort, trackerIP, trackerDNPorts)
 
 	log.Println(datanode.LogSignDN, "#", id, "Successfully launched")
 

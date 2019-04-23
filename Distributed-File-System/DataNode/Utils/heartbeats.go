@@ -13,10 +13,10 @@ func (dataNodeLauncherObj *dataNodeLauncher) SendHeartBeat() {
 	dataNodeLauncherObj.establishPublisherConnection()
 
 	for range time.Tick(dataNodeLauncherObj.heartbeatInterval) {
-		heartbeat := fmt.Sprintf("Heartbeat %d", dataNodeLauncherObj.dataNode.id)
+		heartbeat := fmt.Sprintf("Heartbeat %d", dataNodeLauncherObj.id)
 
 		dataNodeLauncherObj.publisherSocket.Send(heartbeat, 0)
 
-		logger.LogMsg(LogSignL, dataNodeLauncherObj.dataNode.id, "Sent Heartbeat")
+		logger.LogMsg(LogSignL, dataNodeLauncherObj.id, "Sent Heartbeat")
 	}
 }
