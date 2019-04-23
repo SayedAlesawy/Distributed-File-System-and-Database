@@ -2,6 +2,7 @@ package main
 
 import (
 	datanode "Distributed-Video-Processing-Cluster/Distributed-File-System/DataNode/Utils"
+	constants "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Constants"
 	"log"
 	"os"
 	"os/exec"
@@ -10,14 +11,15 @@ import (
 )
 
 //DataNode Launcher Data
-const dataNodeLauncherIP string = "127.0.0.1"
-const heartbeatInterval time.Duration = time.Second
+var dataNodeLauncherIP = constants.DataNodeLauncherIP
+var heartbeatInterval = time.Second
 
 //Tracker Data
-const trackerIP string = "127.0.0.1"
-const trackerIPsPort string = "9000"
+var trackerIP = constants.TrackerIP
 
-var trackerDNPorts = []string{"9001", "9002"}
+var trackerIPsPort = constants.TrackerIPsPort
+
+var trackerDNPorts = constants.TrackerDNPorts
 
 func getTrackerParams() string {
 	trackerParams := trackerIP + " " + trackerDNPorts[0] + " " + trackerDNPorts[1]

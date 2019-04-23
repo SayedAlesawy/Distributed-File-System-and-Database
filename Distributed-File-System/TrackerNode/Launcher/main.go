@@ -2,23 +2,23 @@ package main
 
 import (
 	trackernode "Distributed-Video-Processing-Cluster/Distributed-File-System/TrackerNode/Utils"
+	constants "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Constants"
 	"log"
 	"os/exec"
 	"sync"
-	"time"
 )
 
 // Master Tracker data
-const masterTrackerIP string = "127.0.0.1"
-const ipListenerPort string = "9000"
-const masterTrackerID int = 0
+var masterTrackerIP = constants.TrackerIP
+var ipListenerPort = constants.TrackerIPsPort
+var masterTrackerID = constants.MasterTrackerID
 
 func launchTrackers() {
 	log.Println(trackernode.LogSignL, "Launching Tracker Processes")
 
 	sideTrackerDNIDs := []string{"1", "2"}
-	sideTrackerDNPorts := []string{"9001", "9002"}
-	sideTrackerReqPorts := []string{"8001", "8002"}
+	sideTrackerDNPorts := constants.TrackerDNPorts
+	sideTrackerReqPorts := constants.TrackerReqPorts
 	path := "../TRLauncher/main.go"
 
 	for i := 0; i < 2; i++ {
@@ -40,7 +40,7 @@ func launchTrackers() {
 }
 
 func main() {
-	disconnectionThreshold := time.Duration(2000000001)
+	disconnectionThreshold := constants.DisconnectionThreshold
 
 	trackerNodeLauncherObj := trackernode.NewTrackerNodeLauncher(masterTrackerID, masterTrackerIP, disconnectionThreshold, ipListenerPort)
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	client "Distributed-Video-Processing-Cluster/Client/ClientUtil"
+	constants "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Constants"
 	"fmt"
 	"log"
 	"strings"
@@ -9,11 +10,11 @@ import (
 
 func main() {
 	//Tracker data
-	trackerIP := "127.0.0.1"
-	trackerPorts := []string{"8001", "8002"}
+	trackerIP := constants.TrackerIP
+	trackerPorts := constants.TrackerReqPorts
 
 	//Client data
-	clientIP := "127.0.0.1"
+	clientIP := constants.ClientIP
 	clientID := 1
 	clientPort := ""
 

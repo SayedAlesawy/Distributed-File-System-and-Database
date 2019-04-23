@@ -3,6 +3,7 @@ package trackernode
 import (
 	client "Distributed-Video-Processing-Cluster/Client/ClientUtil"
 	comm "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Comm"
+	constants "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Constants"
 	logger "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Log"
 	"fmt"
 	"log"
@@ -51,7 +52,7 @@ func (trackerNodeObj *trackerNode) uploadRequestHandler(request client.Request) 
 	//And I will always pick it
 	log.Println(LogSignTR, "#", trackerNodeObj.id, "Upload Request Handler Started")
 
-	dataNodeConnectionString := "127.0.0.1" + " " + "7012" + " " + "7011"
+	dataNodeConnectionString := constants.TrackerResponse
 
 	trackerNodeObj.sendDataNodePortsToClient(request, dataNodeConnectionString)
 }
