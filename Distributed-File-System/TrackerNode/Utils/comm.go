@@ -21,17 +21,17 @@ func (trackerNodeLauncherObj *trackerNodeLauncher) establishSubscriberConnection
 }
 
 // updateSubscriberConnection A function to update the heartbeat susbcription list
-func (trackerNodeLauncherObj *trackerNodeLauncher) updateSubscriberConnection(HBIPsMutex *sync.Mutex) {
-	comm.Connect(trackerNodeLauncherObj.subscriberSocket, serializeIPsMaps(trackerNodeLauncherObj.datanodeHBIPs, HBIPsMutex))
+func (trackerNodeLauncherObj *trackerNodeLauncher) updateSubscriberConnection(portsMutex *sync.Mutex) {
+	comm.Connect(trackerNodeLauncherObj.subscriberSocket, getHBConnections(trackerNodeLauncherObj.datanodeBasePorts, portsMutex))
 }
 
 // ReceiveHandshake A function to constantly check for incoming datanode handshakes
-func (trackerNodeLauncherObj *trackerNodeLauncher) ReceiveHandshake(HBIPsMutex *sync.Mutex, DNIPsMutex *sync.Mutex, timeStampsMutex *sync.Mutex) {
+func (trackerNodeLauncherObj *trackerNodeLauncher) ReceiveHandshake(portsMutex *sync.Mutex, timeStampsMutex *sync.Mutex) {
 	socket, ok := comm.Init(zmq4.REP, "")
 	defer socket.Close()
 	logger.LogFail(ok, LogSignL, trackerNodeLauncherObj.id, "ReceiveHandshake(): Failed to acquire response Socket")
 
-	var connectionString = []string{comm.GetConnectionString(trackerNodeLauncherObj.trackerNode.ip, trackerNodeLauncherObj.trackerIPsPort)}
+	var connectionString = []string{comm.GetConnectionString(trackerNodeLauncherObj.ip, trackerNodeLauncherObj.trackerIPsPort)}
 	comm.Bind(socket, connectionString)
 
 	for {
@@ -40,24 +40,19 @@ func (trackerNodeLauncherObj *trackerNodeLauncher) ReceiveHandshake(HBIPsMutex *
 
 		if status == true {
 			fields := strings.Fields(msg)
-			incomingHBIP := fields[0]
-			incomdingDNIPs := pairIPs{fields[1], fields[2]}
-			incomingID, convErr := strconv.Atoi(fields[3])
+			incomingBaseIP := fields[0] + ":" + fields[2]
+			incomingID, convErr := strconv.Atoi(fields[1])
 			logger.LogErr(convErr, LogSignL, trackerNodeLauncherObj.id, "ReceiveHandshake(): Failed to convert incoming ID")
 
-			HBIPsMutex.Lock()
-			trackerNodeLauncherObj.datanodeHBIPs[incomingID] = incomingHBIP
-			HBIPsMutex.Unlock()
-
-			DNIPsMutex.Lock()
-			trackerNodeLauncherObj.datanodeIPs[incomingID] = incomdingDNIPs
-			DNIPsMutex.Unlock()
+			portsMutex.Lock()
+			trackerNodeLauncherObj.datanodeBasePorts[incomingID] = incomingBaseIP
+			portsMutex.Unlock()
 
 			timeStampsMutex.Lock()
 			trackerNodeLauncherObj.datanodeTimeStamps[incomingID] = time.Now()
 			timeStampsMutex.Unlock()
 
-			logMsg := fmt.Sprintf("Received IP = %s from data node#%d", incomingHBIP, incomingID)
+			logMsg := fmt.Sprintf("Received IP = %s from data node#%d", incomingBaseIP+"00", incomingID)
 			logger.LogMsg(LogSignL, 0, logMsg)
 		}
 	}
@@ -87,13 +82,13 @@ func (trackerNodeObj *trackerNode) sendDataNodePortsToClient(request client.Requ
 }
 
 // serializeIPsMaps A function to serialize IP maps
-func serializeIPsMaps(ipsMap map[int]string, Mutex *sync.Mutex) []string {
+func getHBConnections(ipsMap map[int]string, Mutex *sync.Mutex) []string {
 	var connectionStrings []string
 
 	Mutex.Lock()
 
 	for _, ip := range ipsMap {
-		connection := "tcp://" + ip
+		connection := "tcp://" + ip + "00"
 		connectionStrings = append(connectionStrings, connection)
 	}
 

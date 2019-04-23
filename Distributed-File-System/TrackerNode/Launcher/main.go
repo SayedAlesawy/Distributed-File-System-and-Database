@@ -42,21 +42,18 @@ func launchTrackers() {
 func main() {
 	disconnectionThreshold := time.Duration(2000000001)
 
-	trackerNodeObj := trackernode.NewTrackerNode(masterTrackerID, masterTrackerIP, "", "")
-
-	trackerNodeLauncherObj := trackernode.NewTrackerNodeLauncher(trackerNodeObj, disconnectionThreshold, ipListenerPort)
+	trackerNodeLauncherObj := trackernode.NewTrackerNodeLauncher(masterTrackerID, masterTrackerIP, disconnectionThreshold, ipListenerPort)
 
 	log.Println(trackernode.LogSignL, "Successfully launched")
 
 	launchTrackers()
 
-	var HBIPsMutex sync.Mutex
-	var DNIPsMuttex sync.Mutex
+	var portsMutex sync.Mutex
 	var timeStampsMutex sync.Mutex
 
-	go trackerNodeLauncherObj.ReceiveHandshake(&HBIPsMutex, &DNIPsMuttex, &timeStampsMutex)
+	go trackerNodeLauncherObj.ReceiveHandshake(&portsMutex, &timeStampsMutex)
 
-	go trackerNodeLauncherObj.UpdateDataNodeAliveStatus(&HBIPsMutex, &DNIPsMuttex, &timeStampsMutex)
+	go trackerNodeLauncherObj.UpdateDataNodeAliveStatus(&portsMutex, &timeStampsMutex)
 
-	trackerNodeLauncherObj.ListenToHeartbeats(&HBIPsMutex, &timeStampsMutex)
+	trackerNodeLauncherObj.ListenToHeartbeats(&portsMutex, &timeStampsMutex)
 }

@@ -40,7 +40,7 @@ func (trackerNodeLauncherObj *trackerNodeLauncher) registerTimeStap(heartbeat st
 }
 
 // updateDataNodeAliveStatus A function the update the status of the alive datanodes
-func (trackerNodeLauncherObj *trackerNodeLauncher) UpdateDataNodeAliveStatus(HBIPsMutex *sync.Mutex, DNIPsMutex *sync.Mutex, timeStampsMutex *sync.Mutex) {
+func (trackerNodeLauncherObj *trackerNodeLauncher) UpdateDataNodeAliveStatus(portsMutex *sync.Mutex, timeStampsMutex *sync.Mutex) {
 	for {
 		timeStampsMutex.Lock()
 
@@ -49,16 +49,12 @@ func (trackerNodeLauncherObj *trackerNodeLauncher) UpdateDataNodeAliveStatus(HBI
 			threshold := trackerNodeLauncherObj.disconnectionThreshold
 
 			if diff > threshold {
-				connection := []string{"tcp://" + trackerNodeLauncherObj.datanodeHBIPs[id]}
+				connection := []string{"tcp://" + trackerNodeLauncherObj.datanodeBasePorts[id] + "00"}
 				comm.Disconnect(trackerNodeLauncherObj.subscriberSocket, connection)
 
-				HBIPsMutex.Lock()
-				delete(trackerNodeLauncherObj.datanodeHBIPs, id)
-				HBIPsMutex.Unlock()
-
-				DNIPsMutex.Lock()
-				delete(trackerNodeLauncherObj.datanodeIPs, id)
-				DNIPsMutex.Unlock()
+				portsMutex.Lock()
+				delete(trackerNodeLauncherObj.datanodeBasePorts, id)
+				portsMutex.Unlock()
 
 				delete(trackerNodeLauncherObj.datanodeTimeStamps, id)
 
