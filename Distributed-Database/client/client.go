@@ -24,7 +24,7 @@ func initPublisher(addr string) *zmq4.Socket {
 }
 
 //AssignedSlaveListner :
-func AssignedSlaveListner() {
+func AssignedSlaveListner(command *string) {
 	subscriber, _ := zmq4.NewSocket(zmq4.SUB)
 	subscriber.SetLinger(0)
 	defer subscriber.Close()
@@ -45,23 +45,24 @@ func AssignedSlaveListner() {
 
 		sID, _ := strconv.ParseInt(s, 10, 64)
 
-		slavelist[sID-1].Send("READ   ", 0)
+		slavelist[sID-1].Send(*command, 0)
 		fmt.Println("[AssignedSlaveListner] Sending Query to Assigned Slave")
 
 	}
 }
 
 func main() {
+	command := ""
 	publisher := initPublisher("tcp://127.0.0.1:9092")
 
 	defer publisher.Close()
 
-	go AssignedSlaveListner()
+	go AssignedSlaveListner(&command)
 	reader := bufio.NewReader(os.Stdin)
 
 	for range time.Tick(time.Second) {
 		fmt.Print("LOGIN/REGISTER?(L/R)")
-		command, _ := reader.ReadString('\n')
+		command, _ = reader.ReadString('\n')
 		if strings.Compare(command, "R\n") == 0 {
 			fmt.Println("ENTER REGISTER USER INFORMATION")
 			fmt.Print("name :")
@@ -71,7 +72,7 @@ func main() {
 			fmt.Print("password :")
 			password, _ := reader.ReadString('\n')
 
-			publisher.Send("LOGIN:"+name+";"+email+";"+password, 0)
+			publisher.Send("REGISTER:"+name+";"+email+";"+password, 0)
 			fmt.Println("[MainThread]", "REGISTER:"+name+";"+email+";"+password)
 
 		} else {

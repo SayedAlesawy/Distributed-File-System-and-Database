@@ -110,7 +110,10 @@ func connectDB() *sql.DB {
 	user := os.Getenv("USER_NAME")
 	password := os.Getenv("PASSWORD")
 	dbname := os.Getenv("DB_NAME")
+	/*
 
+		db, err := sql.Open("mysql", "root:.1@/os_db")
+	*/
 	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s "+
 		"password=%s dbname=%s sslmode=disable",
 		host, port, user, password, dbname)
