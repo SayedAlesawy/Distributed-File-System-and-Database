@@ -1,6 +1,8 @@
 package trackernode
 
 import (
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/pebbe/zmq4"
@@ -32,6 +34,17 @@ type trackerNodeLauncher struct {
 	datanodeBasePorts      map[int]string    //Keep track of the datanode base ports
 }
 
+// ReplicationRequest A struct to represent a replication request issued from Tracker and handled from Data Node
+type ReplicationRequest struct {
+	ID              int    //The ID of the replication request
+	ClientID        int    //The client ID associated with the replicated file
+	FileName        string //The file name to be replicated
+	SourceID        int    //The ID of the source Data Node
+	TargetNodeID    int    //The ID of the target machine
+	TargetNodeIP    string //The IP of the target machine (connect there)
+	TargetNodeRPort string //The replication port of the target machine (connect there)
+}
+
 //NewTrackerNode A constructor function for the trackerNode type
 func NewTrackerNode(_id int, _ip string, _requestsPort string, _datanodePort string) trackerNode {
 	trackerNodeObj := trackerNode{
@@ -57,4 +70,34 @@ func NewTrackerNodeLauncher(_id int, _ip string, _disconnectionThreshold time.Du
 	trackerNodeLauncherObj.datanodeBasePorts = make(map[int]string)
 
 	return trackerNodeLauncherObj
+}
+
+// SerializeRequest A function to serialize a request structure
+func SerializeRequest(request ReplicationRequest) string {
+	serializedRequest := strconv.Itoa(request.ID) + " " + strconv.Itoa(request.ClientID) + " " +
+		request.FileName + " " + strconv.Itoa(request.SourceID) + " " + strconv.Itoa(request.TargetNodeID) + " " +
+		request.TargetNodeIP + " " + request.TargetNodeRPort
+
+	return serializedRequest
+}
+
+// DeserializeRequest A function to deserialize a request structure
+func DeserializeRequest(serializedRequest string) ReplicationRequest {
+	fields := strings.Fields(serializedRequest)
+	requestID, _ := strconv.Atoi(fields[0])
+	clientID, _ := strconv.Atoi(fields[1])
+	sourceID, _ := strconv.Atoi(fields[3])
+	targetNodeID, _ := strconv.Atoi(fields[4])
+
+	requestObj := ReplicationRequest{
+		ID:              requestID,
+		ClientID:        clientID,
+		FileName:        fields[2],
+		SourceID:        sourceID,
+		TargetNodeID:    targetNodeID,
+		TargetNodeIP:    fields[5],
+		TargetNodeRPort: fields[6],
+	}
+
+	return requestObj
 }

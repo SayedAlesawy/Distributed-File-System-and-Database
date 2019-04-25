@@ -22,5 +22,9 @@ func main() {
 
 	log.Println(trackernode.LogSignTR, args[2], "Successfully launched")
 
+	if id == 1 {
+		go trackerNodeObj.Replicate()
+	}
+
 	trackerNodeObj.ListenToClientRequests()
 }

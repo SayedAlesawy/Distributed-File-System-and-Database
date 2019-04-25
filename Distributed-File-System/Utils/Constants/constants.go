@@ -18,10 +18,13 @@ var TrackerIPsPort = "9000"
 var MasterTrackerID = 0
 
 // DisconnectionThreshold The time after which we consider a data node offline
-var DisconnectionThreshold = time.Duration(2000000001)
+var DisconnectionThreshold = time.Duration(2*time.Second + 1)
 
 // TrackerResponse A temporary tracker response
 var TrackerResponse = DataNodeLauncherIP + " " + "7012" + " " + "7011"
+
+// ReplicationRoutineFrequency The time after which the replication routine runs
+var ReplicationRoutineFrequency = time.Duration(10 * time.Second)
 
 //----------------------------------------------------------------------
 

@@ -81,6 +81,27 @@ func (trackerNodeObj *trackerNode) sendDataNodePortsToClient(request client.Requ
 	logger.LogMsg(LogSignTR, trackerNodeObj.id, fmt.Sprintf("Responded to request#%d, from client #%d", request.ID, request.ClientID))
 }
 
+func (trackerNodeObj *trackerNode) sendReplicationRequest(request ReplicationRequest, sourceIP string, sourcePort string) {
+	socket, ok := comm.Init(zmq4.REQ, "")
+	defer socket.Close()
+	logger.LogFail(ok, LogSignTR, trackerNodeObj.id, "sendReplicationRequest(): Failed acquire request socket")
+
+	var connectionString = []string{comm.GetConnectionString(sourceIP, sourcePort)}
+	comm.Connect(socket, connectionString)
+
+	logMsg := fmt.Sprintf("Sending RPQ {Src:%d, file:%s, client:%d, Dst:%d}",
+		request.SourceID, request.FileName, request.ClientID, request.TargetNodeID)
+	logger.LogMsg(LogSignTR, trackerNodeObj.id, logMsg)
+
+	_, err := socket.Send(SerializeRequest(request), zmq4.DONTWAIT)
+	status := true
+	if err != nil {
+		status = false
+	}
+	logger.LogFail(status, LogSignTR, trackerNodeObj.id, "sendDataNodePortsToClient(): Failed to send RPQ")
+	logger.LogSuccess(status, LogSignTR, trackerNodeObj.id, "Successfully sent RPQ")
+}
+
 // serializeIPsMaps A function to serialize IP maps
 func getHBConnections(ipsMap map[int]string, Mutex *sync.Mutex) []string {
 	var connectionStrings []string
