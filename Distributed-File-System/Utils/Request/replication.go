@@ -16,7 +16,7 @@ func SerializeReplication(request ReplicationRequest) string {
 		strconv.Itoa(request.SourceID) + " " +
 		strconv.Itoa(request.TargetNodeID) + " " +
 		request.TargetNodeIP + " " +
-		request.TargetNodeRPort
+		request.TargetNodeBasePort
 
 	return serializedRequest
 }
@@ -35,14 +35,14 @@ func DeserializeReplication(serializedRequest string) ReplicationRequest {
 	}
 
 	requestObj := ReplicationRequest{
-		ID:              requestID,
-		Type:            Type(fields[0]),
-		ClientID:        clientID,
-		FileName:        fields[3],
-		SourceID:        sourceID,
-		TargetNodeID:    targetNodeID,
-		TargetNodeIP:    fields[6],
-		TargetNodeRPort: fields[7],
+		ID:                 requestID,
+		Type:               Type(fields[0]),
+		ClientID:           clientID,
+		FileName:           fields[3],
+		SourceID:           sourceID,
+		TargetNodeID:       targetNodeID,
+		TargetNodeIP:       fields[6],
+		TargetNodeBasePort: fields[7],
 	}
 
 	return requestObj
@@ -58,6 +58,6 @@ func PrintReplication(request ReplicationRequest) {
 	fmt.Println("  SoruceID = ", request.SourceID)
 	fmt.Println("  TargetNodeID = ", request.TargetNodeID)
 	fmt.Println("  TargetNodeIP = ", request.TargetNodeIP)
-	fmt.Println("  TargetNodeRPort = ", request.TargetNodeRPort)
+	fmt.Println("  TargetNodeBasePort = ", request.TargetNodeBasePort)
 	fmt.Println()
 }

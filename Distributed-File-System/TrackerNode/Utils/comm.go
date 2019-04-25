@@ -93,11 +93,7 @@ func (trackerNodeObj *trackerNode) sendReplicationRequest(req request.Replicatio
 		req.SourceID, req.FileName, req.ClientID, req.TargetNodeID)
 	logger.LogMsg(LogSignTR, trackerNodeObj.id, logMsg)
 
-	_, err := socket.Send(request.SerializeReplication(req), zmq4.DONTWAIT)
-	status := true
-	if err != nil {
-		status = false
-	}
+	status := comm.SendString(socket, request.SerializeReplication(req))
 	logger.LogFail(status, LogSignTR, trackerNodeObj.id, "sendDataNodePortsToClient(): Failed to send RPQ")
 	logger.LogSuccess(status, LogSignTR, trackerNodeObj.id, "Successfully sent RPQ")
 }

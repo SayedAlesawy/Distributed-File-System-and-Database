@@ -37,14 +37,14 @@ type UploadRequest struct {
 
 // ReplicationRequest Represents a replication request
 type ReplicationRequest struct {
-	ID              int    //The ID of the replication request
-	Type            Type   //Represents the type of a request
-	ClientID        int    //The client ID associated with the replicated file
-	FileName        string //The file name to be replicated
-	SourceID        int    //The ID of the source Data Node
-	TargetNodeID    int    //The ID of the target machine
-	TargetNodeIP    string //The IP of the target machine (connect there)
-	TargetNodeRPort string //The replication port of the target machine (connect there)
+	ID                 int    //The ID of the replication request
+	Type               Type   //Represents the type of a request
+	ClientID           int    //The client ID associated with the replicated file
+	FileName           string //The file name to be replicated
+	SourceID           int    //The ID of the source Data Node
+	TargetNodeID       int    //The ID of the target machine
+	TargetNodeIP       string //The IP of the target machine (connect there)
+	TargetNodeBasePort string //The replication port of the target machine (connect there)
 }
 
 // GetType A function to get the type of a request

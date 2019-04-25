@@ -4,6 +4,7 @@ import (
 	comm "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Comm"
 	logger "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Log"
 	request "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Request"
+	"log"
 
 	"github.com/pebbe/zmq4"
 )
@@ -34,6 +35,9 @@ func (datanodeObj *dataNode) handleRequest(serializedRequest string) {
 		datanodeObj.uploadRequestHandler(req)
 	} else if reqType == request.Download {
 		//Call download request handler
+	} else if reqType == request.Replicate {
+		req := request.DeserializeReplication(serializedRequest)
+		datanodeObj.replicationRequestHandler(req)
 	} else if reqType == request.Invalid {
 		logger.LogMsg(LogSignDN, datanodeObj.id, "Invalid Request")
 		return
@@ -43,5 +47,20 @@ func (datanodeObj *dataNode) handleRequest(serializedRequest string) {
 func (datanodeObj *dataNode) uploadRequestHandler(req request.UploadRequest) {
 	logger.LogMsg(LogSignDN, datanodeObj.id, "Upload Request Handler Started")
 
-	datanodeObj.receiveDataFromClient(req)
+	datanodeObj.receiveData(req.FileName, datanodeObj.upPort)
+}
+
+func (datanodeObj *dataNode) replicationRequestHandler(req request.ReplicationRequest) {
+	logger.LogMsg(LogSignDN, datanodeObj.id, "Replication Request Handler Started")
+
+	if req.SourceID == datanodeObj.id {
+		log.Println("I am source")
+		datanodeObj.sendReplicationRequest(req)
+		datanodeObj.sendData(req.FileName, req.TargetNodeID, req.TargetNodeIP, req.TargetNodeBasePort+"24")
+	} else if req.TargetNodeID == datanodeObj.id {
+		log.Println("I am dest")
+		datanodeObj.receiveData(req.FileName, datanodeObj.repUpPort)
+	} else {
+		logger.LogMsg(LogSignDN, datanodeObj.id, "Malformed replication request")
+	}
 }

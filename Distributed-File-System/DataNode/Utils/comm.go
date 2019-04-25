@@ -44,6 +44,22 @@ func (dataNodeLauncherObj dataNodeLauncher) SendHandshake(handshake string) {
 	logger.LogMsg(LogSignL, dataNodeLauncherObj.id, "Successfully connected to Tracker")
 }
 
+// sendReplicationRequest A function to send replication request to target machine
+func (datanodeObj *dataNode) sendReplicationRequest(req request.ReplicationRequest) bool {
+	socket, ok := comm.Init(zmq4.REQ, "")
+	defer socket.Close()
+	logger.LogFail(ok, LogSignDN, datanodeObj.id, "sendReplicationRequest(): Failed to acquire request Socket")
+
+	var connectionString = []string{comm.GetConnectionString(req.TargetNodeIP, req.TargetNodeBasePort+"21")}
+	comm.Connect(socket, connectionString)
+
+	status := comm.SendString(socket, request.SerializeReplication(req))
+	logger.LogFail(status, LogSignDN, datanodeObj.id, "sendReplicationRequest(): Failed to send RPQ to target")
+	logger.LogSuccess(status, LogSignDN, datanodeObj.id, "Successfully sent RPQ to target")
+
+	return status
+}
+
 // receiveChunkCount A function to recieve the chunk count of a file
 func (datanodeObj *dataNode) receiveChunkCount(socket *zmq4.Socket) (int, bool) {
 	chunkCount, ok := comm.RecvString(socket)
@@ -57,6 +73,17 @@ func (datanodeObj *dataNode) receiveChunkCount(socket *zmq4.Socket) (int, bool) 
 	return ret, (ok && (convErr == nil))
 }
 
+// sendChunkCount A function to send the chunk count of a file
+func (datanodeObj *dataNode) sendChunkCount(socket *zmq4.Socket, chunksCount int) bool {
+	logger.LogMsg(LogSignDN, datanodeObj.id, "Sending chunk count to target")
+
+	status := comm.SendString(socket, strconv.Itoa(chunksCount))
+	logger.LogFail(status, LogSignDN, datanodeObj.id, "sendChunkCount(): Failed to RPQ send chunk count to target")
+	logger.LogSuccess(status, LogSignDN, datanodeObj.id, "Successfully sent RPQ chunk count to target")
+
+	return status
+}
+
 // receiveChunk A function to recieve a chunk of data
 func (datanodeObj *dataNode) receiveChunk(socket *zmq4.Socket, chunkID int) ([]byte, bool) {
 	chunk, ok := comm.RecvBytes(socket)
@@ -67,15 +94,26 @@ func (datanodeObj *dataNode) receiveChunk(socket *zmq4.Socket, chunkID int) ([]b
 	return chunk, ok
 }
 
-func (datanodeObj *dataNode) receiveDataFromClient(req request.UploadRequest) {
+// sendChunk A function to send a chunk of data
+func (datanodeObj *dataNode) sendDataChunk(socket *zmq4.Socket, data []byte, chunkID int) bool {
+	logger.LogMsg(LogSignDN, datanodeObj.id, fmt.Sprintf("Sending RPQ chunk #%d to target", chunkID))
+
+	status := comm.SendBytes(socket, data)
+	logger.LogFail(status, LogSignDN, datanodeObj.id, "sendChunk(): Failed to RPQ send chunk to target")
+	logger.LogSuccess(status, LogSignDN, datanodeObj.id, fmt.Sprintf("Successfully sent RPQ chunk #%d to target", chunkID))
+
+	return status
+}
+
+func (datanodeObj *dataNode) receiveData(fileName string, port string) {
 	socket, ok := comm.Init(zmq4.REP, "")
 	defer socket.Close()
 	logger.LogFail(ok, LogSignDN, datanodeObj.id, "receiveDataFromClient(): Failed to acquire response Socket")
 
-	var connectionString = []string{comm.GetConnectionString(datanodeObj.ip, datanodeObj.upPort)}
+	var connectionString = []string{comm.GetConnectionString(datanodeObj.ip, port)}
 	comm.Bind(socket, connectionString)
 
-	file := fileutils.CreateFile(req.FileName)
+	file := fileutils.CreateFile(fileName)
 	defer file.Close()
 
 	chunkCount, chunkCountStatus := datanodeObj.receiveChunkCount(socket)
@@ -97,4 +135,45 @@ func (datanodeObj *dataNode) receiveDataFromClient(req request.UploadRequest) {
 	}
 
 	logger.LogMsg(LogSignDN, datanodeObj.id, "File received")
+}
+
+// sendData A function to send Data to the target machine
+func (datanodeObj *dataNode) sendData(fileName string, id int, ip string, port string) {
+	socket, ok := comm.Init(zmq4.REQ, "")
+	defer socket.Close()
+	logger.LogFail(ok, LogSignDN, datanodeObj.id, "sendData(): Failed to acquire request Socket")
+
+	var connectionString = []string{comm.GetConnectionString(ip, port)}
+	comm.Connect(socket, connectionString)
+
+	file := fileutils.OpenFile(fileName)
+	defer file.Close()
+
+	chunksCount := fileutils.GetChunksCount(fileName)
+
+	//Send the chunksCount to the DataNode
+	chunkCountStatus := datanodeObj.sendChunkCount(socket, chunksCount)
+
+	if chunkCountStatus == false {
+		logger.LogMsg(LogSignDN, datanodeObj.id, "sendData(): Abort!")
+		return
+	}
+
+	//Send the actual chunks of data
+	for i := 0; i < chunksCount; i++ {
+		chunk, size, done := fileutils.ReadChunk(file)
+
+		if done == true {
+			break
+		}
+
+		chunkStatus := datanodeObj.sendDataChunk(socket, chunk[:size], i+1)
+
+		if chunkStatus == false {
+			logger.LogMsg(LogSignDN, datanodeObj.id, "sendData(): Abort!")
+			return
+		}
+	}
+
+	logger.LogMsg(LogSignDN, datanodeObj.id, fmt.Sprintf("Successfully replicated file to data node #%d", id))
 }

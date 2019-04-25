@@ -67,8 +67,8 @@ func (trackerNodeObj *trackerNode) Replicate() {
 	fileName := "CA.mp4"
 	sourceIP := constants.DataNodeLauncherIP
 	targetIP := constants.DataNodeLauncherIP
-	sourcePort := "7024"
-	targetRPort := "6024"
+	sourcePort := "7021"
+	targetBasePort := "60"
 	sourceID := 1
 	targetNodeID := 2
 
@@ -76,15 +76,19 @@ func (trackerNodeObj *trackerNode) Replicate() {
 		logger.LogMsg(LogSignL, trackerNodeObj.id, "Replication Routine, running ...")
 
 		repReqObj := request.ReplicationRequest{
-			ID:              id,
-			ClientID:        clientID,
-			FileName:        fileName,
-			SourceID:        sourceID,
-			TargetNodeID:    targetNodeID,
-			TargetNodeIP:    targetIP,
-			TargetNodeRPort: targetRPort,
+			ID:                 id,
+			Type:               request.Replicate,
+			ClientID:           clientID,
+			FileName:           fileName,
+			SourceID:           sourceID,
+			TargetNodeID:       targetNodeID,
+			TargetNodeIP:       targetIP,
+			TargetNodeBasePort: targetBasePort,
 		}
 
 		trackerNodeObj.sendReplicationRequest(repReqObj, sourceIP, sourcePort)
+
+		targetBasePort = "50"
+		targetNodeID = 3
 	}
 }

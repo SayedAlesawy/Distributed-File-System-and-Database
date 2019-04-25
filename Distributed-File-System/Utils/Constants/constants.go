@@ -24,7 +24,7 @@ var DisconnectionThreshold = time.Duration(2*time.Second + 1)
 var TrackerResponse = DataNodeLauncherIP + " " + "7012" + " " + "7011"
 
 // ReplicationRoutineFrequency The time after which the replication routine runs
-var ReplicationRoutineFrequency = time.Duration(10 * time.Second)
+var ReplicationRoutineFrequency = time.Duration(time.Minute)
 
 //----------------------------------------------------------------------
 
