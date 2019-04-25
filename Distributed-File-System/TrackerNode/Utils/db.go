@@ -1,4 +1,4 @@
-package main
+package trackernode
 
 import (
 	"database/sql"
@@ -150,6 +150,9 @@ func connectDB() *sql.DB {
 	fmt.Println("[DB] Successfully connected!")
 	return db
 }
+
+/*
 func main() {
 	Migrate(connectDB())
 }
+*/

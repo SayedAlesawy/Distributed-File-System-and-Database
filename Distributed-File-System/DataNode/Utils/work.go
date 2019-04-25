@@ -1,10 +1,9 @@
 package datanode
 
 import (
-	client "Distributed-Video-Processing-Cluster/Client/ClientUtil"
 	comm "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Comm"
 	logger "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Log"
-	"fmt"
+	request "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Request"
 
 	"github.com/pebbe/zmq4"
 )
@@ -22,28 +21,27 @@ func (datanodeObj *dataNode) ListenToClients() {
 		serializedRequest, recvStatus := comm.RecvString(socket)
 
 		if recvStatus == true {
-			deserializedRequest := client.DeserializeRequest(serializedRequest)
-
-			logMsg := fmt.Sprintf("Received [%s] request from client#%d", deserializedRequest.Type, deserializedRequest.ClientID)
-			logger.LogMsg(LogSignDN, datanodeObj.id, logMsg)
-
-			go datanodeObj.handleRequest(deserializedRequest)
+			go datanodeObj.handleRequest(serializedRequest)
 		}
 	}
 }
 
-func (datanodeObj *dataNode) handleRequest(request client.Request) {
-	if request.Type == client.Download {
+func (datanodeObj *dataNode) handleRequest(serializedRequest string) {
+	reqType := request.GetType(serializedRequest)
+
+	if reqType == request.Upload {
+		req := request.DeserializeUpload(serializedRequest)
+		datanodeObj.uploadRequestHandler(req)
+	} else if reqType == request.Download {
 		//Call download request handler
-	} else if request.Type == client.Upload {
-		datanodeObj.uploadRequestHandler(request)
-	} else if request.Type == client.Display {
-		//Call display request handler
+	} else if reqType == request.Invalid {
+		logger.LogMsg(LogSignDN, datanodeObj.id, "Invalid Request")
+		return
 	}
 }
 
-func (datanodeObj *dataNode) uploadRequestHandler(request client.Request) {
+func (datanodeObj *dataNode) uploadRequestHandler(req request.UploadRequest) {
 	logger.LogMsg(LogSignDN, datanodeObj.id, "Upload Request Handler Started")
 
-	datanodeObj.receiveDataFromClient(request)
+	datanodeObj.receiveDataFromClient(req)
 }

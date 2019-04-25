@@ -1,9 +1,9 @@
 package trackernode
 
 import (
-	client "Distributed-Video-Processing-Cluster/Client/ClientUtil"
 	comm "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Comm"
 	logger "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Log"
+	request "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Request"
 	"fmt"
 	"strconv"
 	"strings"
@@ -59,29 +59,29 @@ func (trackerNodeLauncherObj *trackerNodeLauncher) ReceiveHandshake(portsMutex *
 }
 
 // sendDataNodePortsToClient A function send a data node connection string to client
-func (trackerNodeObj *trackerNode) sendDataNodePortsToClient(request client.Request, dataNodeConnectionString string) {
+func (trackerNodeObj *trackerNode) sendDataNodePortsToClient(req request.UploadRequest, dataNodeConnectionString string) {
 	socket, ok := comm.Init(zmq4.REQ, "")
 	defer socket.Close()
 	logger.LogFail(ok, LogSignTR, trackerNodeObj.id, "sendDataNodePortsToClient(): Failed acquire request socket")
 
-	var connectionString = []string{comm.GetConnectionString(request.ClientIP, request.ClientPort)}
+	var connectionString = []string{comm.GetConnectionString(req.ClientIP, req.ClientPort)}
 	comm.Connect(socket, connectionString)
 
 	status := false
 
 	for status != true {
 
-		logger.LogMsg(LogSignTR, trackerNodeObj.id, fmt.Sprintf("Responding to request#%d, from client #%d", request.ID, request.ClientID))
+		logger.LogMsg(LogSignTR, trackerNodeObj.id, fmt.Sprintf("Responding to request#%d, from client #%d", req.ID, req.ClientID))
 
 		status = comm.SendString(socket, dataNodeConnectionString)
 		logger.LogFail(status, LogSignTR, trackerNodeObj.id, fmt.Sprintf("sendDataNodePortsToClient(): Failed to respond to request#%d, from client #%d, ... Trying again",
-			request.ID, request.ClientID))
+			req.ID, req.ClientID))
 	}
 
-	logger.LogMsg(LogSignTR, trackerNodeObj.id, fmt.Sprintf("Responded to request#%d, from client #%d", request.ID, request.ClientID))
+	logger.LogMsg(LogSignTR, trackerNodeObj.id, fmt.Sprintf("Responded to request#%d, from client #%d", req.ID, req.ClientID))
 }
 
-func (trackerNodeObj *trackerNode) sendReplicationRequest(request ReplicationRequest, sourceIP string, sourcePort string) {
+func (trackerNodeObj *trackerNode) sendReplicationRequest(req request.ReplicationRequest, sourceIP string, sourcePort string) {
 	socket, ok := comm.Init(zmq4.REQ, "")
 	defer socket.Close()
 	logger.LogFail(ok, LogSignTR, trackerNodeObj.id, "sendReplicationRequest(): Failed acquire request socket")
@@ -90,10 +90,10 @@ func (trackerNodeObj *trackerNode) sendReplicationRequest(request ReplicationReq
 	comm.Connect(socket, connectionString)
 
 	logMsg := fmt.Sprintf("Sending RPQ {Src:%d, file:%s, client:%d, Dst:%d}",
-		request.SourceID, request.FileName, request.ClientID, request.TargetNodeID)
+		req.SourceID, req.FileName, req.ClientID, req.TargetNodeID)
 	logger.LogMsg(LogSignTR, trackerNodeObj.id, logMsg)
 
-	_, err := socket.Send(SerializeRequest(request), zmq4.DONTWAIT)
+	_, err := socket.Send(request.SerializeReplication(req), zmq4.DONTWAIT)
 	status := true
 	if err != nil {
 		status = false

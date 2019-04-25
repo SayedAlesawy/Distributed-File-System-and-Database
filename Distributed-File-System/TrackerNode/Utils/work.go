@@ -1,12 +1,11 @@
 package trackernode
 
 import (
-	client "Distributed-Video-Processing-Cluster/Client/ClientUtil"
 	comm "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Comm"
 	constants "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Constants"
 	logger "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Log"
+	request "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Request"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/pebbe/zmq4"
@@ -25,45 +24,37 @@ func (trackerNodeObj *trackerNode) ListenToClientRequests() {
 		serializedRequest, recvStatus := comm.RecvString(socket)
 
 		if recvStatus == true {
-			deserializedRequest := client.DeserializeRequest(serializedRequest)
-
-			logMsg := fmt.Sprintf("Received request from client#%d", deserializedRequest.ClientID)
-			logger.LogMsg(LogSignTR, trackerNodeObj.id, logMsg)
-
-			go trackerNodeObj.handleRequest(deserializedRequest)
+			go trackerNodeObj.handleRequest(serializedRequest)
 		}
 	}
 }
 
 // handleRequest A function to handle requests based on their types
-func (trackerNodeObj *trackerNode) handleRequest(request client.Request) {
-	if request.Type == client.Download {
+func (trackerNodeObj *trackerNode) handleRequest(serializedRequest string) {
+	reqType := request.GetType(serializedRequest)
+
+	if reqType == request.Upload {
+		req := request.DeserializeUpload(serializedRequest)
+		trackerNodeObj.uploadRequestHandler(req)
+	} else if reqType == request.Download {
 		//Call download request handler
-	} else if request.Type == client.Upload {
-		trackerNodeObj.uploadRequestHandler(request)
-	} else if request.Type == client.Display {
-		//Call display request handler
-	} else {
-		log.Println(LogSignTR, "Invalid request type")
+	} else if reqType == request.Invalid {
+		logger.LogMsg(LogSignTR, trackerNodeObj.id, "Invalid Request")
+		return
 	}
 }
 
 // uploadRequestHandler A function to handle a request of type Upload
-func (trackerNodeObj *trackerNode) uploadRequestHandler(request client.Request) {
+func (trackerNodeObj *trackerNode) uploadRequestHandler(req request.UploadRequest) {
 	//Should check the DataNode database and choose an alive node
 	//Until I install the DB, I will always assume that the first Data Node is always alive
 	//And I will always pick it
-	logger.LogMsg(LogSignTR, trackerNodeObj.id, "Upload Request Handler Started")
+	logMsg := fmt.Sprintf("Handling upload request #%d, from client #%d", req.ID, req.ClientID)
+	logger.LogMsg(LogSignTR, trackerNodeObj.id, logMsg)
 
 	dataNodeConnectionString := constants.TrackerResponse
 
-	trackerNodeObj.sendDataNodePortsToClient(request, dataNodeConnectionString)
-}
-
-// downloadRequestHandler A function to handle requests of type download
-func (trackerNodeObj *trackerNode) downloadRequestHandler(request client.Request) {
-	logger.LogMsg(LogSignTR, trackerNodeObj.id, "Download Request Handler Started")
-
+	trackerNodeObj.sendDataNodePortsToClient(req, dataNodeConnectionString)
 }
 
 // Replicate A function that implements the periodic Replication routine
@@ -84,7 +75,7 @@ func (trackerNodeObj *trackerNode) Replicate() {
 	for range time.Tick(constants.ReplicationRoutineFrequency) {
 		logger.LogMsg(LogSignL, trackerNodeObj.id, "Replication Routine, running ...")
 
-		repReqObj := ReplicationRequest{
+		repReqObj := request.ReplicationRequest{
 			ID:              id,
 			ClientID:        clientID,
 			FileName:        fileName,

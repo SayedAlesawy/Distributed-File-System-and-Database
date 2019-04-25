@@ -2,6 +2,7 @@ package client
 
 import (
 	fileutils "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/File"
+	request "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Request"
 	"log"
 	"strconv"
 
@@ -34,9 +35,7 @@ func (clientObj *client) EstablishConnection() {
 }
 
 // SendRequest A function to send a request to Tracker
-func (clientObj *client) SendRequest(request Request) {
-	serializedRequest := SerializeRequest(request)
-
+func (clientObj *client) SendRequest(serializedRequest string) {
 	acknowledge := ""
 
 	for acknowledge != "ACK" {
@@ -80,7 +79,7 @@ func (clientObj *client) ReceiveResponse() string {
 }
 
 // RSendRequestToDN ..
-func (clientObj *client) RSendRequestToDN(dnIP string, dnReqPort string, request Request) {
+func (clientObj *client) RSendRequestToDN(dnIP string, dnReqPort string, serializedRequest string) {
 	socket, _ := zmq4.NewSocket(zmq4.REQ)
 	defer socket.Close()
 
@@ -88,7 +87,6 @@ func (clientObj *client) RSendRequestToDN(dnIP string, dnReqPort string, request
 
 	socket.Connect(connectionString)
 	acknowledge := ""
-	serializedRequest := SerializeRequest(request)
 
 	log.Printf("[Client #%d] Resending request to DataNode\n", clientObj.id)
 
@@ -135,17 +133,17 @@ func (clientObj *client) sendDataChunk(socket *zmq4.Socket, data []byte, chunkID
 }
 
 // SendData ..
-func (clientObj *client) SendData(request Request, dnIP string, dnDataPort string) {
+func (clientObj *client) SendData(req request.UploadRequest, dnIP string, dnDataPort string) {
 	socket, _ := zmq4.NewSocket(zmq4.REQ)
 	defer socket.Close()
 
 	connectionString := "tcp://" + dnIP + ":" + dnDataPort
 	socket.Connect(connectionString)
 
-	file := fileutils.OpenFile(request.FileName)
+	file := fileutils.OpenFile(req.FileName)
 	defer file.Close()
 
-	chunksCount := fileutils.GetChunksCount(request.FileName)
+	chunksCount := fileutils.GetChunksCount(req.FileName)
 
 	//Send the chunksCount to the DataNode
 	clientObj.sendChunkCount(socket, chunksCount)

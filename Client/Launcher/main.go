@@ -3,6 +3,7 @@ package main
 import (
 	client "Distributed-Video-Processing-Cluster/Client/ClientUtil"
 	constants "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Constants"
+	request "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Request"
 	"fmt"
 	"log"
 	"strings"
@@ -51,25 +52,29 @@ func main() {
 		fmt.Scanf("%s", &fileName)
 		//TODO handle file not found before sending requests to datanode and maybe before sending
 		//to tracker 7ata
-		requestObj := client.Request{
-			ID:         requestID,
-			ClientID:   clientID,
-			ClientIP:   clientIP,
-			ClientPort: clientPort,
-			FileName:   fileName,
-			Type:       client.RequestType(requestType),
+		if requestType == "up" {
+			requestObj := request.UploadRequest{
+				ID:         requestID,
+				Type:       request.Upload,
+				ClientID:   clientID,
+				ClientIP:   clientIP,
+				ClientPort: clientPort,
+				FileName:   fileName,
+			}
+
+			serializeRequest := request.SerializeUpload(requestObj)
+
+			clientObj.SendRequest(serializeRequest)
+			response := clientObj.ReceiveResponse()
+
+			log.Println("[Client #]", clientID, "Received this:", response)
+
+			arr := strings.Fields(response)
+
+			clientObj.RSendRequestToDN(arr[0], arr[2], serializeRequest)
+
+			clientObj.SendData(requestObj, arr[0], arr[1])
 		}
-
-		clientObj.SendRequest(requestObj)
-		response := clientObj.ReceiveResponse()
-
-		log.Println("[Client #]", clientID, "Received this:", response)
-
-		arr := strings.Fields(response)
-
-		clientObj.RSendRequestToDN(arr[0], arr[2], requestObj)
-
-		clientObj.SendData(requestObj, arr[0], arr[1])
 
 		requestID++
 	}

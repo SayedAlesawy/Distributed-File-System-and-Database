@@ -1,10 +1,10 @@
 package datanode
 
 import (
-	client "Distributed-Video-Processing-Cluster/Client/ClientUtil"
 	comm "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Comm"
 	fileutils "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/File"
 	logger "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Log"
+	request "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Request"
 	"fmt"
 	"strconv"
 
@@ -67,7 +67,7 @@ func (datanodeObj *dataNode) receiveChunk(socket *zmq4.Socket, chunkID int) ([]b
 	return chunk, ok
 }
 
-func (datanodeObj *dataNode) receiveDataFromClient(request client.Request) {
+func (datanodeObj *dataNode) receiveDataFromClient(req request.UploadRequest) {
 	socket, ok := comm.Init(zmq4.REP, "")
 	defer socket.Close()
 	logger.LogFail(ok, LogSignDN, datanodeObj.id, "receiveDataFromClient(): Failed to acquire response Socket")
@@ -75,7 +75,7 @@ func (datanodeObj *dataNode) receiveDataFromClient(request client.Request) {
 	var connectionString = []string{comm.GetConnectionString(datanodeObj.ip, datanodeObj.upPort)}
 	comm.Bind(socket, connectionString)
 
-	file := fileutils.CreateFile(request.FileName)
+	file := fileutils.CreateFile(req.FileName)
 	defer file.Close()
 
 	chunkCount, chunkCountStatus := datanodeObj.receiveChunkCount(socket)
