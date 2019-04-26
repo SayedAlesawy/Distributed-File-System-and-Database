@@ -4,7 +4,6 @@ import (
 	comm "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Comm"
 	logger "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Log"
 	request "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Request"
-	"fmt"
 	"log"
 	"strconv"
 	"strings"
@@ -57,8 +56,7 @@ func (datanodeObj *dataNode) uploadRequestHandler(req request.UploadRequest) {
 
 func (datanodeObj *dataNode) downloadRequestHandler(req request.UploadRequest, chunkCount int) {
 	logger.LogMsg(LogSignDN, datanodeObj.id, "Download Request Handler Started")
-	fmt.Println("Count = ", chunkCount)
-	request.PrintUpload(req)
+
 }
 
 func (datanodeObj *dataNode) replicationRequestHandler(req request.ReplicationRequest) {

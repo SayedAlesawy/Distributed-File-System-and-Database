@@ -51,6 +51,24 @@ func GetFileSize(fileName string) int64 {
 	return fileInfo.Size()
 }
 
+// SeekPosition A function to seek a certian position in a file
+func SeekPosition(file *os.File, start int) *os.File {
+	offset := int64(start) * ChunkSize
+	whence := 0
+
+	file.Seek(offset, whence)
+
+	return file
+}
+
+// OpenSeekFile A function to open a file from a certain start
+func OpenSeekFile(fileName string, start int) *os.File {
+	file := OpenFile(fileName)
+	file = SeekPosition(file, start)
+
+	return file
+}
+
 // GetChunksCount A function to get the number of chunks in a file
 func GetChunksCount(fileName string) int {
 	fileSize := GetFileSize(fileName)

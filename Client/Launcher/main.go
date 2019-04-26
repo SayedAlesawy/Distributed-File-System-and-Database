@@ -92,19 +92,22 @@ func main() {
 
 			arr := strings.Fields(response)
 			chunkCount, _ := strconv.Atoi(arr[0])
-			dataNodeCount := len(arr) - 1
+			dataNodeCount := (len(arr) - 1) / 2
 			chunkEach := chunkCount / dataNodeCount
+			start := 0
 
-			for i := 1; i < dataNodeCount; i += 2 {
-				if i == dataNodeCount-1 {
+			for i := 1; i < len(arr)-1; i += 2 {
+				if i == len(arr)-2 {
 					chunkEach += (chunkCount % dataNodeCount)
 				}
 
-				req := serializeRequest + " " + strconv.Itoa(chunkEach)
-				log.Println("req = ", req)
-				log.Println("IP = ", arr[i])
-				log.Println("Port = ", arr[i+1]+"1")
+				req := serializeRequest + " " + strconv.Itoa(start) + " " + strconv.Itoa(chunkEach)
+				//log.Println("req = ", req)
+				//log.Println("IP = ", arr[i])
+				//log.Println("Port = ", arr[i+1]+"1")
+				start += chunkEach
 				clientObj.RSendRequestToDN(arr[i], arr[i+1]+"1", req)
+				// receive data (on a thread?)
 			}
 		}
 
