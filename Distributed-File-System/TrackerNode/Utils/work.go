@@ -57,6 +57,8 @@ func (trackerNodeObj *trackerNode) uploadRequestHandler(req request.UploadReques
 	trackerNodeObj.sendDataNodePortsToClient(req, dataNodeConnectionString)
 }
 
+//func (trackerNodeObj *trackerNode) downloadRequestHandler(req request)
+
 // Replicate A function that implements the periodic Replication routine
 func (trackerNodeObj *trackerNode) Replicate() {
 	// Do replication routine logic

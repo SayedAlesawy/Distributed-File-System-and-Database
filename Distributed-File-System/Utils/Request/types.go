@@ -35,6 +35,16 @@ type UploadRequest struct {
 	FileName   string //The name of the file to be uploaded
 }
 
+// DownloadRequest Represents a download request
+type DownloadRequest struct {
+	ID         int    //The ID of the request
+	Type       Type   //Represents the type of a request
+	ClientID   int    //The ID of the client who sent the requst
+	ClientIP   string //The IP of the client who sent the request
+	ClientPort string //The port of the client who sent the request
+	FileName   string //The name of the file to be uploaded
+}
+
 // ReplicationRequest Represents a replication request
 type ReplicationRequest struct {
 	ID                 int    //The ID of the replication request
