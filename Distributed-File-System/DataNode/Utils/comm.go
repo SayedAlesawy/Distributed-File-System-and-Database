@@ -11,7 +11,7 @@ import (
 	"github.com/pebbe/zmq4"
 )
 
-// EstablishPublisherConnection A function to establish a TCP connection for publishing heartbeats
+// establishPublisherConnection A function to establish a TCP connection for publishing heartbeats
 func (dataNodeLauncherObj *dataNodeLauncher) establishPublisherConnection() {
 	publisher, ok := comm.Init(zmq4.PUB, "")
 	dataNodeLauncherObj.publisherSocket = publisher
@@ -96,11 +96,11 @@ func (datanodeObj *dataNode) receiveChunk(socket *zmq4.Socket, chunkID int) ([]b
 
 // sendChunk A function to send a chunk of data
 func (datanodeObj *dataNode) sendDataChunk(socket *zmq4.Socket, data []byte, chunkID int) bool {
-	logger.LogMsg(LogSignDN, datanodeObj.id, fmt.Sprintf("Sending RPQ chunk #%d to target", chunkID))
+	logger.LogMsg(LogSignDN, datanodeObj.id, fmt.Sprintf("Sending chunk #%d to target", chunkID))
 
 	status := comm.SendBytes(socket, data)
-	logger.LogFail(status, LogSignDN, datanodeObj.id, "sendChunk(): Failed to RPQ send chunk to target")
-	logger.LogSuccess(status, LogSignDN, datanodeObj.id, fmt.Sprintf("Successfully sent RPQ chunk #%d to target", chunkID))
+	logger.LogFail(status, LogSignDN, datanodeObj.id, "sendChunk(): Failed to send chunk to target")
+	logger.LogSuccess(status, LogSignDN, datanodeObj.id, fmt.Sprintf("Successfully sent chunk #%d to target", chunkID))
 
 	return status
 }
@@ -176,4 +176,34 @@ func (datanodeObj *dataNode) sendData(fileName string, id int, ip string, port s
 	}
 
 	logger.LogMsg(LogSignDN, datanodeObj.id, fmt.Sprintf("Successfully replicated file to data node #%d", id))
+}
+
+// sendPieces A function to send a group of pieces to clients
+func (datanodeObj *dataNode) sendPieces(req request.UploadRequest, start int, chunksCount int) {
+	socket, ok := comm.Init(zmq4.REQ, "")
+	defer socket.Close()
+	logger.LogFail(ok, LogSignDN, datanodeObj.id, "sendPieces(): Failed to acquire request Socket")
+
+	var connectionString = []string{comm.GetConnectionString(datanodeObj.ip, datanodeObj.downPort)}
+	comm.Bind(socket, connectionString)
+
+	file := fileutils.OpenSeekFile(req.FileName, start)
+	defer file.Close()
+
+	for i := 0; i < chunksCount; i++ {
+		chunk, size, done := fileutils.ReadChunk(file)
+
+		if done == true {
+			break
+		}
+
+		chunkStatus := datanodeObj.sendDataChunk(socket, chunk[:size], start+i)
+
+		if chunkStatus == false {
+			logger.LogMsg(LogSignDN, datanodeObj.id, "sendPieces(): Abort!")
+			return
+		}
+	}
+
+	logger.LogMsg(LogSignDN, datanodeObj.id, fmt.Sprintf("Successfully sent pieces to client #%d", req.ClientID))
 }

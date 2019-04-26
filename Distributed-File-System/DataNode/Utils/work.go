@@ -37,8 +37,10 @@ func (datanodeObj *dataNode) handleRequest(serializedRequest string) {
 		datanodeObj.uploadRequestHandler(req)
 	} else if reqType == request.Download {
 		req := request.DeserializeUpload(serializedRequest)
-		chunkCount, _ := strconv.Atoi(strings.Fields(serializedRequest)[6])
-		datanodeObj.downloadRequestHandler(req, chunkCount)
+		arr := strings.Fields(serializedRequest)
+		start, _ := strconv.Atoi(arr[6])
+		chunkCount, _ := strconv.Atoi(arr[7])
+		datanodeObj.downloadRequestHandler(req, start, chunkCount)
 	} else if reqType == request.Replicate {
 		req := request.DeserializeReplication(serializedRequest)
 		datanodeObj.replicationRequestHandler(req)
@@ -54,9 +56,9 @@ func (datanodeObj *dataNode) uploadRequestHandler(req request.UploadRequest) {
 	datanodeObj.receiveData(req.FileName, datanodeObj.upPort)
 }
 
-func (datanodeObj *dataNode) downloadRequestHandler(req request.UploadRequest, chunkCount int) {
+func (datanodeObj *dataNode) downloadRequestHandler(req request.UploadRequest, start int, chunksCount int) {
 	logger.LogMsg(LogSignDN, datanodeObj.id, "Download Request Handler Started")
-
+	datanodeObj.sendPieces(req, start, chunksCount)
 }
 
 func (datanodeObj *dataNode) replicationRequestHandler(req request.ReplicationRequest) {

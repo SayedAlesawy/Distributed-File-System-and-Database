@@ -95,6 +95,7 @@ func main() {
 			dataNodeCount := (len(arr) - 1) / 2
 			chunkEach := chunkCount / dataNodeCount
 			start := 0
+			blockID := 1
 
 			for i := 1; i < len(arr)-1; i += 2 {
 				if i == len(arr)-2 {
@@ -107,7 +108,8 @@ func main() {
 				//log.Println("Port = ", arr[i+1]+"1")
 				start += chunkEach
 				clientObj.RSendRequestToDN(arr[i], arr[i+1]+"1", req)
-				// receive data (on a thread?)
+				go clientObj.RecvPieces(requestObj, arr[i], arr[i+1]+"3", strconv.Itoa(blockID), chunkEach)
+				blockID++
 			}
 		}
 

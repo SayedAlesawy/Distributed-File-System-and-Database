@@ -1,8 +1,11 @@
 package client
 
 import (
+	comm "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Comm"
 	fileutils "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/File"
+	logger "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Log"
 	request "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Request"
+	"fmt"
 	"log"
 	"strconv"
 
@@ -160,6 +163,41 @@ func (clientObj *client) SendData(req request.UploadRequest, dnIP string, dnData
 	}
 
 	log.Printf("[Client #%d] Successfully sent data to Data Node\n", clientObj.id)
+}
+
+func (clientObj *client) receiveChunk(socket *zmq4.Socket, chunkID int) ([]byte, bool) {
+	chunk, ok := comm.RecvBytes(socket)
+	logger.LogFail(ok, "Client", clientObj.id, "receiveChunk(): Error receiving chunk")
+
+	logger.LogSuccess(ok, "Client", clientObj.id, fmt.Sprintf("Received chunk %d", chunkID))
+
+	return chunk, ok
+}
+
+// RecvPieces ..
+func (clientObj *client) RecvPieces(req request.UploadRequest, dnIP string, dnDownPort string, start string, chunkCount int) {
+	socket, ok := comm.Init(zmq4.REP, "")
+	defer socket.Close()
+	logger.LogFail(ok, "Client", clientObj.id, "RecvPieces(): Failed to acquire response Socket")
+
+	var connectionString = []string{comm.GetConnectionString(dnIP, dnDownPort)}
+	comm.Connect(socket, connectionString)
+
+	file := fileutils.CreateFile(req.FileName[:len(req.FileName)-4] + "#" + start + ".mp4")
+	defer file.Close()
+
+	for i := 0; i < chunkCount; i++ {
+		chunk, chunkStatus := clientObj.receiveChunk(socket, i+1)
+
+		if chunkStatus == false {
+			logger.LogMsg("Client", clientObj.id, "RecvPieces(): Abort!")
+			return
+		}
+
+		fileutils.WriteChunk(file, chunk)
+	}
+
+	logger.LogMsg("Client", clientObj.id, "Piece"+"#"+start+"received")
 }
 
 func (clientObj *client) CloseConnection() {
