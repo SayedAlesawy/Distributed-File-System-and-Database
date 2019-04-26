@@ -4,7 +4,10 @@ import (
 	comm "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Comm"
 	logger "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Log"
 	request "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Request"
+	"fmt"
 	"log"
+	"strconv"
+	"strings"
 
 	"github.com/pebbe/zmq4"
 )
@@ -34,7 +37,9 @@ func (datanodeObj *dataNode) handleRequest(serializedRequest string) {
 		req := request.DeserializeUpload(serializedRequest)
 		datanodeObj.uploadRequestHandler(req)
 	} else if reqType == request.Download {
-		//Call download request handler
+		req := request.DeserializeUpload(serializedRequest)
+		chunkCount, _ := strconv.Atoi(strings.Fields(serializedRequest)[6])
+		datanodeObj.downloadRequestHandler(req, chunkCount)
 	} else if reqType == request.Replicate {
 		req := request.DeserializeReplication(serializedRequest)
 		datanodeObj.replicationRequestHandler(req)
@@ -48,6 +53,12 @@ func (datanodeObj *dataNode) uploadRequestHandler(req request.UploadRequest) {
 	logger.LogMsg(LogSignDN, datanodeObj.id, "Upload Request Handler Started")
 
 	datanodeObj.receiveData(req.FileName, datanodeObj.upPort)
+}
+
+func (datanodeObj *dataNode) downloadRequestHandler(req request.UploadRequest, chunkCount int) {
+	logger.LogMsg(LogSignDN, datanodeObj.id, "Download Request Handler Started")
+	fmt.Println("Count = ", chunkCount)
+	request.PrintUpload(req)
 }
 
 func (datanodeObj *dataNode) replicationRequestHandler(req request.ReplicationRequest) {

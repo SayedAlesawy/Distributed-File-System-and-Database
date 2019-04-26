@@ -27,17 +27,17 @@ var TrackerResponse = DataNodeLauncherIP + " " + "7012" + " " + "7011"
 var ReplicationRoutineFrequency = time.Duration(time.Minute)
 
 var DownloadIP1 = DataNodeLauncherIP
-var DownloadPort1 = "7013"
+var DownloadPort1 = "701"
 var DownloadIP2 = DataNodeLauncherIP
-var DownloadPort2 = "7023"
+var DownloadPort2 = "702"
 var DownloadIP3 = DataNodeLauncherIP
-var DownloadPort3 = "6013"
+var DownloadPort3 = "601"
 var DownloadIP4 = DataNodeLauncherIP
-var DownloadPort4 = "6023"
+var DownloadPort4 = "602"
 var DownloadIP5 = DataNodeLauncherIP
-var DownloadPort5 = "5013"
+var DownloadPort5 = "501"
 var DownloadIP6 = DataNodeLauncherIP
-var DownloadPort6 = "5023"
+var DownloadPort6 = "502"
 
 //----------------------------------------------------------------------
 

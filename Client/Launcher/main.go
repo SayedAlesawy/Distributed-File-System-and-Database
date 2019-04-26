@@ -6,6 +6,7 @@ import (
 	request "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Request"
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 )
 
@@ -88,6 +89,23 @@ func main() {
 			clientObj.SendRequest(serializeRequest)
 			response := clientObj.ReceiveResponse()
 			log.Println("[Client #]", clientID, "Received this:", response)
+
+			arr := strings.Fields(response)
+			chunkCount, _ := strconv.Atoi(arr[0])
+			dataNodeCount := len(arr) - 1
+			chunkEach := chunkCount / dataNodeCount
+
+			for i := 1; i < dataNodeCount; i += 2 {
+				if i == dataNodeCount-1 {
+					chunkEach += (chunkCount % dataNodeCount)
+				}
+
+				req := serializeRequest + " " + strconv.Itoa(chunkEach)
+				log.Println("req = ", req)
+				log.Println("IP = ", arr[i])
+				log.Println("Port = ", arr[i+1]+"1")
+				clientObj.RSendRequestToDN(arr[i], arr[i+1]+"1", req)
+			}
 		}
 
 		requestID++

@@ -63,7 +63,10 @@ func (trackerNodeObj *trackerNode) downloadRequestHandler(req request.UploadRequ
 	logMsg := fmt.Sprintf("Handling download request #%d, from client #%d", req.ID, req.ClientID)
 	logger.LogMsg(LogSignTR, trackerNodeObj.id, logMsg)
 
-	downloadPorts := constants.DownloadIP1 + " " + constants.DownloadPort1 + " " +
+	chunksCount := "47" //hardcoded for now, should be fetched from the DB
+
+	downloadPorts := chunksCount + " " +
+		constants.DownloadIP1 + " " + constants.DownloadPort1 + " " +
 		constants.DownloadIP2 + " " + constants.DownloadPort2 + " " +
 		constants.DownloadIP3 + " " + constants.DownloadPort3 + " " +
 		constants.DownloadIP4 + " " + constants.DownloadPort4 + " " +
