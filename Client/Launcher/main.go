@@ -3,6 +3,7 @@ package main
 import (
 	client "Distributed-Video-Processing-Cluster/Client/ClientUtil"
 	constants "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Constants"
+	fileutils "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/File"
 	request "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Request"
 	"fmt"
 	"log"
@@ -97,6 +98,8 @@ func main() {
 			start := 0
 			blockID := 1
 
+			done := make(chan bool)
+
 			for i := 1; i < len(arr)-1; i += 2 {
 				if i == len(arr)-2 {
 					chunkEach += (chunkCount % dataNodeCount)
@@ -108,9 +111,15 @@ func main() {
 				//log.Println("Port = ", arr[i+1]+"1")
 				start += chunkEach
 				clientObj.RSendRequestToDN(arr[i], arr[i+1]+"1", req)
-				go clientObj.RecvPieces(requestObj, arr[i], arr[i+1]+"3", strconv.Itoa(blockID), chunkEach)
+				go clientObj.RecvPieces(requestObj, arr[i], arr[i+1]+"3", strconv.Itoa(blockID), chunkEach, done)
 				blockID++
 			}
+
+			for i := 0; i < dataNodeCount; i++ {
+				log.Println("[Client #]", clientID, "Thread", <-done)
+			}
+
+			fileutils.AssembleFile(requestObj.FileName, requestObj.FileName[:len(requestObj.FileName)-4], dataNodeCount)
 		}
 
 		requestID++

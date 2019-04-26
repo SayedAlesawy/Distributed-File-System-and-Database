@@ -4,6 +4,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"strconv"
 )
 
 // LogSign Used in logging FileUtil errors
@@ -93,4 +94,33 @@ func WriteChunk(file *os.File, chunk []byte) int {
 	logErr(err)
 
 	return size
+}
+
+// DeleteFile A function to delete a file
+func DeleteFile(fileName string) {
+	err := os.Remove(fileName)
+	logErr(err)
+}
+
+// AssembleFile A function to assemble pieces into a single file
+func AssembleFile(outputFileName string, pieceName string, blockCount int) {
+	outFile := CreateFile(outputFileName)
+	defer outFile.Close()
+
+	for i := 1; i <= blockCount; i++ {
+		fileName := pieceName + "#" + strconv.Itoa(i) + ".mp4"
+		count := GetChunksCount(fileName)
+		file := OpenFile(fileName)
+
+		for j := 1; j <= count; j++ {
+			data, _, _ := ReadChunk(file)
+			WriteChunk(outFile, data)
+			log.Println("Assembled chunk #", j)
+		}
+
+		file.Close()
+		DeleteFile(fileName)
+		log.Println("Assembled Block #", i)
+	}
+	log.Println("Assembly Finished")
 }

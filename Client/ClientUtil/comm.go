@@ -175,7 +175,7 @@ func (clientObj *client) receiveChunk(socket *zmq4.Socket, chunkID int) ([]byte,
 }
 
 // RecvPieces ..
-func (clientObj *client) RecvPieces(req request.UploadRequest, dnIP string, dnDownPort string, start string, chunkCount int) {
+func (clientObj *client) RecvPieces(req request.UploadRequest, dnIP string, dnDownPort string, start string, chunkCount int, done chan bool) {
 	socket, ok := comm.Init(zmq4.REP, "")
 	defer socket.Close()
 	logger.LogFail(ok, "Client", clientObj.id, "RecvPieces(): Failed to acquire response Socket")
@@ -198,6 +198,7 @@ func (clientObj *client) RecvPieces(req request.UploadRequest, dnIP string, dnDo
 	}
 
 	logger.LogMsg("Client", clientObj.id, "Piece"+"#"+start+"received")
+	done <- true
 }
 
 func (clientObj *client) CloseConnection() {
