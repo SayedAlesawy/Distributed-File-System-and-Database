@@ -26,6 +26,19 @@ var TrackerResponse = DataNodeLauncherIP + " " + "7012" + " " + "7011"
 // ReplicationRoutineFrequency The time after which the replication routine runs
 var ReplicationRoutineFrequency = time.Duration(time.Minute)
 
+var DownloadIP1 = DataNodeLauncherIP
+var DownloadPort1 = "7013"
+var DownloadIP2 = DataNodeLauncherIP
+var DownloadPort2 = "7023"
+var DownloadIP3 = DataNodeLauncherIP
+var DownloadPort3 = "6013"
+var DownloadIP4 = DataNodeLauncherIP
+var DownloadPort4 = "6023"
+var DownloadIP5 = DataNodeLauncherIP
+var DownloadPort5 = "5013"
+var DownloadIP6 = DataNodeLauncherIP
+var DownloadPort6 = "5023"
+
 //----------------------------------------------------------------------
 
 // DataNodeLauncherIP The IP of a single Data Node

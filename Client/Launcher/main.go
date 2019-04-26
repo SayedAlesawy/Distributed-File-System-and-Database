@@ -74,6 +74,20 @@ func main() {
 			clientObj.RSendRequestToDN(arr[0], arr[2], serializeRequest)
 
 			clientObj.SendData(requestObj, arr[0], arr[1])
+		} else if requestType == "dwn" {
+			requestObj := request.UploadRequest{
+				ID:         requestID,
+				Type:       request.Download,
+				ClientID:   clientID,
+				ClientIP:   clientIP,
+				ClientPort: clientPort,
+				FileName:   fileName,
+			}
+
+			serializeRequest := request.SerializeUpload(requestObj)
+			clientObj.SendRequest(serializeRequest)
+			response := clientObj.ReceiveResponse()
+			log.Println("[Client #]", clientID, "Received this:", response)
 		}
 
 		requestID++

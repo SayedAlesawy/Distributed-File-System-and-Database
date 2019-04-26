@@ -37,7 +37,8 @@ func (trackerNodeObj *trackerNode) handleRequest(serializedRequest string) {
 		req := request.DeserializeUpload(serializedRequest)
 		trackerNodeObj.uploadRequestHandler(req)
 	} else if reqType == request.Download {
-		//Call download request handler
+		req := request.DeserializeUpload(serializedRequest)
+		trackerNodeObj.downloadRequestHandler(req)
 	} else if reqType == request.Invalid {
 		logger.LogMsg(LogSignTR, trackerNodeObj.id, "Invalid Request")
 		return
@@ -57,7 +58,20 @@ func (trackerNodeObj *trackerNode) uploadRequestHandler(req request.UploadReques
 	trackerNodeObj.sendDataNodePortsToClient(req, dataNodeConnectionString)
 }
 
-//func (trackerNodeObj *trackerNode) downloadRequestHandler(req request)
+func (trackerNodeObj *trackerNode) downloadRequestHandler(req request.UploadRequest) {
+	//Should do DB logic here
+	logMsg := fmt.Sprintf("Handling download request #%d, from client #%d", req.ID, req.ClientID)
+	logger.LogMsg(LogSignTR, trackerNodeObj.id, logMsg)
+
+	downloadPorts := constants.DownloadIP1 + " " + constants.DownloadPort1 + " " +
+		constants.DownloadIP2 + " " + constants.DownloadPort2 + " " +
+		constants.DownloadIP3 + " " + constants.DownloadPort3 + " " +
+		constants.DownloadIP4 + " " + constants.DownloadPort4 + " " +
+		constants.DownloadIP5 + " " + constants.DownloadPort5 + " " +
+		constants.DownloadIP6 + " " + constants.DownloadPort6
+
+	trackerNodeObj.sendDataNodePortsToClient(req, downloadPorts)
+}
 
 // Replicate A function that implements the periodic Replication routine
 func (trackerNodeObj *trackerNode) Replicate() {
