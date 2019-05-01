@@ -21,10 +21,10 @@ var MasterTrackerID = 0
 var DisconnectionThreshold = time.Duration(2*time.Second + 1)
 
 // TrackerResponse A temporary tracker response
-var TrackerResponse = DataNodeLauncherIP + " " + "7012" + " " + "7011"
+var TrackerResponse = DataNodeLauncherIP + " " + "7011"
 
 // ReplicationRoutineFrequency The time after which the replication routine runs
-var ReplicationRoutineFrequency = time.Duration(time.Minute)
+var ReplicationRoutineFrequency = time.Duration(10 * time.Minute)
 
 var DownloadIP1 = DataNodeLauncherIP
 var DownloadPort1 = "701"

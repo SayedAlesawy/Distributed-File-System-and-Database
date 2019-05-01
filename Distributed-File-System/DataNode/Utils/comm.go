@@ -105,13 +105,17 @@ func (datanodeObj *dataNode) sendDataChunk(socket *zmq4.Socket, data []byte, chu
 	return status
 }
 
-func (datanodeObj *dataNode) receiveData(fileName string, port string) {
+func (datanodeObj *dataNode) receiveData(fileName string, ip string, port string, dir int) {
 	socket, ok := comm.Init(zmq4.REP, "")
 	defer socket.Close()
 	logger.LogFail(ok, LogSignDN, datanodeObj.id, "receiveDataFromClient(): Failed to acquire response Socket")
 
-	var connectionString = []string{comm.GetConnectionString(datanodeObj.ip, port)}
-	comm.Bind(socket, connectionString)
+	var connectionString = []string{comm.GetConnectionString(ip, port)}
+	if dir == 1 {
+		comm.Connect(socket, connectionString)
+	} else {
+		comm.Bind(socket, connectionString)
+	}
 
 	file := fileutils.CreateFile(fileName)
 	defer file.Close()

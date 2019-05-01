@@ -140,8 +140,8 @@ func (clientObj *client) SendData(req request.UploadRequest, dnIP string, dnData
 	socket, _ := zmq4.NewSocket(zmq4.REQ)
 	defer socket.Close()
 
-	connectionString := "tcp://" + dnIP + ":" + dnDataPort
-	socket.Connect(connectionString)
+	connectionString := "tcp://" + clientObj.ip + ":" + clientObj.port
+	socket.Bind(connectionString)
 
 	file := fileutils.OpenFile(req.FileName)
 	defer file.Close()

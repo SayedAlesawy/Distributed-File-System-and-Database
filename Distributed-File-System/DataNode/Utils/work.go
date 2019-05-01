@@ -53,7 +53,7 @@ func (datanodeObj *dataNode) handleRequest(serializedRequest string) {
 func (datanodeObj *dataNode) uploadRequestHandler(req request.UploadRequest) {
 	logger.LogMsg(LogSignDN, datanodeObj.id, "Upload Request Handler Started")
 
-	datanodeObj.receiveData(req.FileName, datanodeObj.upPort)
+	datanodeObj.receiveData(req.FileName, req.ClientIP, req.ClientPort, 1)
 }
 
 func (datanodeObj *dataNode) downloadRequestHandler(req request.UploadRequest, start int, chunksCount int) {
@@ -70,7 +70,7 @@ func (datanodeObj *dataNode) replicationRequestHandler(req request.ReplicationRe
 		datanodeObj.sendData(req.FileName, req.TargetNodeID, req.TargetNodeIP, req.TargetNodeBasePort+"24")
 	} else if req.TargetNodeID == datanodeObj.id {
 		log.Println("I am dest")
-		datanodeObj.receiveData(req.FileName, datanodeObj.repUpPort)
+		datanodeObj.receiveData(req.FileName, datanodeObj.ip, datanodeObj.repUpPort, 2)
 	} else {
 		logger.LogMsg(LogSignDN, datanodeObj.id, "Malformed replication request")
 	}
