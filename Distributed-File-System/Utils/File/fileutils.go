@@ -103,12 +103,12 @@ func DeleteFile(fileName string) {
 }
 
 // AssembleFile A function to assemble pieces into a single file
-func AssembleFile(outputFileName string, pieceName string, blockCount int) {
+func AssembleFile(outputFileName string, pieceName string, extension string, blockCount int) {
 	outFile := CreateFile(outputFileName)
 	defer outFile.Close()
 
 	for i := 1; i <= blockCount; i++ {
-		fileName := pieceName + "#" + strconv.Itoa(i) + ".mp4"
+		fileName := pieceName + "#" + strconv.Itoa(i) + extension
 		count := GetChunksCount(fileName)
 		file := OpenFile(fileName)
 

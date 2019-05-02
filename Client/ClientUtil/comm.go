@@ -175,15 +175,15 @@ func (clientObj *client) receiveChunk(socket *zmq4.Socket, chunkID int) ([]byte,
 }
 
 // RecvPieces ..
-func (clientObj *client) RecvPieces(req request.UploadRequest, dnIP string, dnDownPort string, start string, chunkCount int, done chan bool) {
+func (clientObj *client) RecvPieces(req request.UploadRequest, start string, chunkCount int, done chan bool) {
 	socket, ok := comm.Init(zmq4.REP, "")
 	defer socket.Close()
 	logger.LogFail(ok, "Client", clientObj.id, "RecvPieces(): Failed to acquire response Socket")
 
-	var connectionString = []string{comm.GetConnectionString(dnIP, dnDownPort)}
-	comm.Connect(socket, connectionString)
+	var connectionString = []string{comm.GetConnectionString(clientObj.ip, req.ClientPort)}
+	comm.Bind(socket, connectionString)
 
-	file := fileutils.CreateFile(req.FileName[:len(req.FileName)-4] + "#" + start + ".mp4")
+	file := fileutils.CreateFile(req.FileName[:len(req.FileName)-4] + "#" + start + req.FileName[len(req.FileName)-4:])
 	defer file.Close()
 
 	for i := 0; i < chunkCount; i++ {

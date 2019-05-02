@@ -188,8 +188,8 @@ func (datanodeObj *dataNode) sendPieces(req request.UploadRequest, start int, ch
 	defer socket.Close()
 	logger.LogFail(ok, LogSignDN, datanodeObj.id, "sendPieces(): Failed to acquire request Socket")
 
-	var connectionString = []string{comm.GetConnectionString(datanodeObj.ip, datanodeObj.downPort)}
-	comm.Bind(socket, connectionString)
+	var connectionString = []string{comm.GetConnectionString(req.ClientIP, req.ClientPort)}
+	comm.Connect(socket, connectionString)
 
 	file := fileutils.OpenSeekFile(req.FileName, start)
 	defer file.Close()

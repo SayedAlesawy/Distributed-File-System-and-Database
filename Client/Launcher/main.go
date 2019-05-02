@@ -7,6 +7,7 @@ import (
 	request "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Request"
 	"fmt"
 	"log"
+	"os"
 	"strconv"
 	"strings"
 )
@@ -18,17 +19,10 @@ func main() {
 
 	//Client data
 	clientIP := constants.ClientIP
-	clientID := 1
-	clientPort := ""
+	clientID, _ := strconv.Atoi(os.Args[1])
+	clientPort := os.Args[2]
 
-	//Read Client data
-	log.Print("[Client] ID = ")
-	fmt.Scanf("%d", &clientID)
-
-	log.Print("[Client] Port = ")
-	fmt.Scanf("%s", &clientPort)
-
-	clientObj := client.NewClient(clientID, clientIP, clientPort, trackerIP, trackerPorts)
+	clientObj := client.NewClient(clientID, clientIP, clientPort+"0", trackerIP, trackerPorts)
 	clientObj.EstablishConnection()
 
 	log.Println("[Client]", "Successfully launched")
@@ -60,7 +54,7 @@ func main() {
 				Type:       request.Upload,
 				ClientID:   clientID,
 				ClientIP:   clientIP,
-				ClientPort: clientPort,
+				ClientPort: clientPort + "0",
 				FileName:   fileName,
 			}
 
@@ -76,13 +70,14 @@ func main() {
 			clientObj.RSendRequestToDN(arr[0], arr[1], serializeRequest)
 
 			clientObj.SendData(requestObj, arr[0], arr[1])
+
 		} else if requestType == "dwn" {
 			requestObj := request.UploadRequest{
 				ID:         requestID,
 				Type:       request.Download,
 				ClientID:   clientID,
 				ClientIP:   clientIP,
-				ClientPort: clientPort,
+				ClientPort: clientPort + "0",
 				FileName:   fileName,
 			}
 
@@ -97,6 +92,7 @@ func main() {
 			chunkEach := chunkCount / dataNodeCount
 			start := 0
 			blockID := 1
+			currPort := 1
 
 			done := make(chan bool)
 
@@ -105,21 +101,25 @@ func main() {
 					chunkEach += (chunkCount % dataNodeCount)
 				}
 
+				requestObj.ClientPort = requestObj.ClientPort[:3] + strconv.Itoa(i)
+				serializeRequest := request.SerializeUpload(requestObj)
+
 				req := serializeRequest + " " + strconv.Itoa(start) + " " + strconv.Itoa(chunkEach)
-				//log.Println("req = ", req)
-				//log.Println("IP = ", arr[i])
-				//log.Println("Port = ", arr[i+1]+"1")
+
 				start += chunkEach
 				clientObj.RSendRequestToDN(arr[i], arr[i+1]+"1", req)
-				go clientObj.RecvPieces(requestObj, arr[i], arr[i+1]+"3", strconv.Itoa(blockID), chunkEach, done)
+
+				go clientObj.RecvPieces(requestObj, strconv.Itoa(blockID), chunkEach, done)
+
 				blockID++
+				currPort++
 			}
 
 			for i := 0; i < dataNodeCount; i++ {
 				log.Println("[Client #]", clientID, "Thread", <-done)
 			}
 
-			fileutils.AssembleFile(requestObj.FileName, requestObj.FileName[:len(requestObj.FileName)-4], dataNodeCount)
+			fileutils.AssembleFile(requestObj.FileName, requestObj.FileName[:len(requestObj.FileName)-4], requestObj.FileName[len(requestObj.FileName)-4:], dataNodeCount)
 		}
 
 		requestID++
