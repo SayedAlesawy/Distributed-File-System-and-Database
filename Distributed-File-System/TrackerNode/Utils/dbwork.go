@@ -24,7 +24,7 @@ func insertDataNode(db *sql.DB, dataNodeID int, ip string, basePort string) bool
 
 // deleteDataNode A function to delete a data node from the DataNodes table
 func deleteDataNode(db *sql.DB, dataNodeID int) bool {
-	sqlStatement := sqlInsertDataNode
+	sqlStatement := sqlDeleteDataNode
 
 	logMsgs := logger.LogInfo{
 		Success: fmt.Sprintf("DataNode #%d deleted Successfully", dataNodeID),

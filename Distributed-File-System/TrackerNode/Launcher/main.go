@@ -3,6 +3,8 @@ package main
 import (
 	trackernode "Distributed-Video-Processing-Cluster/Distributed-File-System/TrackerNode/Utils"
 	constants "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Constants"
+	dbwrapper "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Database"
+
 	"log"
 	"os/exec"
 	"sync"
@@ -42,18 +44,26 @@ func launchTrackers() {
 func main() {
 	disconnectionThreshold := constants.DisconnectionThreshold
 
-	trackerNodeLauncherObj := trackernode.NewTrackerNodeLauncher(masterTrackerID, masterTrackerIP, disconnectionThreshold, ipListenerPort)
+	db := dbwrapper.ConnectDB()
+	defer db.Close()
+
+	dbwrapper.CleanUP(db, trackernode.SQLDropDataNodesTable+trackernode.SQLDropMetaFileTable)
+	dbwrapper.Migrate(db, trackernode.SQLCreateDataNodesTable+trackernode.SQLCreateMetaFile)
+
+	trackerNodeLauncherObj := trackernode.NewTrackerNodeLauncher(masterTrackerID, masterTrackerIP, disconnectionThreshold, ipListenerPort, db)
 
 	log.Println(trackernode.LogSignL, "Successfully launched")
 
 	launchTrackers()
 
 	var portsMutex sync.Mutex
+	var ipMutex sync.Mutex
 	var timeStampsMutex sync.Mutex
+	var dbMutex sync.Mutex
 
-	go trackerNodeLauncherObj.ReceiveHandshake(&portsMutex, &timeStampsMutex)
+	go trackerNodeLauncherObj.ReceiveHandshake(&ipMutex, &portsMutex, &timeStampsMutex, &dbMutex)
 
-	go trackerNodeLauncherObj.UpdateDataNodeAliveStatus(&portsMutex, &timeStampsMutex)
+	go trackerNodeLauncherObj.UpdateDataNodeAliveStatus(&ipMutex, &portsMutex, &timeStampsMutex, &dbMutex)
 
-	trackerNodeLauncherObj.ListenToHeartbeats(&portsMutex, &timeStampsMutex)
+	trackerNodeLauncherObj.ListenToHeartbeats(&ipMutex, &portsMutex, &timeStampsMutex)
 }

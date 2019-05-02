@@ -1,7 +1,7 @@
 package trackernode
 
-// sqlCreateDataNodesTable SQL to create the DataNodes table
-const sqlCreateDataNodesTable string = `
+// SQLCreateDataNodesTable SQL to create the DataNodes table
+const SQLCreateDataNodesTable string = `
 	CREATE TABLE datanodes (
 	id SERIAL PRIMARY KEY,
 	dataNodeID int UNIQUE NOT NULL,
@@ -10,8 +10,8 @@ const sqlCreateDataNodesTable string = `
 	);
 `
 
-// sqlCreateMetaFile SQL to create the Meta Files table
-const sqlCreateMetaFile string = `
+// SQLCreateMetaFile SQL to create the Meta Files table
+const SQLCreateMetaFile string = `
 	CREATE TABLE metafiles (
 	id SERIAL PRIMARY KEY,
 	fileName varchar(60) NOT NULL,
@@ -23,11 +23,11 @@ const sqlCreateMetaFile string = `
 	ADD CONSTRAINT unq_filename_clientid UNIQUE(fileName, clientID);
 `
 
-// sqlDropDataNodesTable SQL to drop the DataNodes table
-const sqlDropDataNodesTable string = `DROP TABLE IF EXISTS datanodes;`
+// SQLDropDataNodesTable SQL to drop the DataNodes table
+const SQLDropDataNodesTable string = `DROP TABLE IF EXISTS datanodes;`
 
-// sqlDropMetaFileTable SQL to drop the Meta Files table
-const sqlDropMetaFileTable string = `DROP TABLE IF EXISTS metafiles;`
+// SQLDropMetaFileTable SQL to drop the Meta Files table
+const SQLDropMetaFileTable string = `DROP TABLE IF EXISTS metafiles;`
 
 // sqlInsertDataNode SQL to insert a data node in the DataNodes table
 const sqlInsertDataNode string = `

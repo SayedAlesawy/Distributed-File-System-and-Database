@@ -20,13 +20,31 @@ func (trackerNodeLauncherObj *trackerNodeLauncher) establishSubscriberConnection
 	logger.LogFail(ok, LogSignL, trackerNodeLauncherObj.id, "establishPublisherConnection(): Failed to acquire subscriber Socket")
 }
 
+// serializeIPsMaps A function to serialize IP maps
+func (trackerNodeLauncherObj *trackerNodeLauncher) getHBConnections(ipMutex *sync.Mutex, portMutex *sync.Mutex) []string {
+	var connectionStrings []string
+
+	ipMutex.Lock()
+	portMutex.Lock()
+
+	for id, ip := range trackerNodeLauncherObj.datanodeIPs {
+		connection := comm.GetConnectionString(ip, trackerNodeLauncherObj.datanodeBasePorts[id]+"00")
+		connectionStrings = append(connectionStrings, connection)
+	}
+
+	portMutex.Unlock()
+	ipMutex.Unlock()
+
+	return connectionStrings
+}
+
 // updateSubscriberConnection A function to update the heartbeat susbcription list
-func (trackerNodeLauncherObj *trackerNodeLauncher) updateSubscriberConnection(portsMutex *sync.Mutex) {
-	comm.Connect(trackerNodeLauncherObj.subscriberSocket, getHBConnections(trackerNodeLauncherObj.datanodeBasePorts, portsMutex))
+func (trackerNodeLauncherObj *trackerNodeLauncher) updateSubscriberConnection(ipMutex *sync.Mutex, portsMutex *sync.Mutex) {
+	comm.Connect(trackerNodeLauncherObj.subscriberSocket, trackerNodeLauncherObj.getHBConnections(ipMutex, portsMutex))
 }
 
 // ReceiveHandshake A function to constantly check for incoming datanode handshakes
-func (trackerNodeLauncherObj *trackerNodeLauncher) ReceiveHandshake(portsMutex *sync.Mutex, timeStampsMutex *sync.Mutex) {
+func (trackerNodeLauncherObj *trackerNodeLauncher) ReceiveHandshake(ipMutex *sync.Mutex, portsMutex *sync.Mutex, timeStampsMutex *sync.Mutex, dbMutex *sync.Mutex) {
 	socket, ok := comm.Init(zmq4.REP, "")
 	defer socket.Close()
 	logger.LogFail(ok, LogSignL, trackerNodeLauncherObj.id, "ReceiveHandshake(): Failed to acquire response Socket")
@@ -40,19 +58,28 @@ func (trackerNodeLauncherObj *trackerNodeLauncher) ReceiveHandshake(portsMutex *
 
 		if status == true {
 			fields := strings.Fields(msg)
-			incomingBaseIP := fields[0] + ":" + fields[2]
+			incomingIP := fields[0]
+			incomingBasePort := fields[2]
 			incomingID, convErr := strconv.Atoi(fields[1])
 			logger.LogErr(convErr, LogSignL, trackerNodeLauncherObj.id, "ReceiveHandshake(): Failed to convert incoming ID")
 
+			ipMutex.Lock()
+			trackerNodeLauncherObj.datanodeIPs[incomingID] = incomingIP
+			ipMutex.Unlock()
+
 			portsMutex.Lock()
-			trackerNodeLauncherObj.datanodeBasePorts[incomingID] = incomingBaseIP
+			trackerNodeLauncherObj.datanodeBasePorts[incomingID] = incomingBasePort
 			portsMutex.Unlock()
 
 			timeStampsMutex.Lock()
 			trackerNodeLauncherObj.datanodeTimeStamps[incomingID] = time.Now()
 			timeStampsMutex.Unlock()
 
-			logMsg := fmt.Sprintf("Received IP = %s from data node#%d", incomingBaseIP+"00", incomingID)
+			dbMutex.Lock()
+			insertDataNode(trackerNodeLauncherObj.db, incomingID, incomingIP, incomingBasePort)
+			dbMutex.Unlock()
+
+			logMsg := fmt.Sprintf("Received IP = %s from data node#%d", incomingIP+":"+incomingBasePort+"00", incomingID)
 			logger.LogMsg(LogSignL, 0, logMsg)
 		}
 	}
@@ -96,20 +123,4 @@ func (trackerNodeObj *trackerNode) sendReplicationRequest(req request.Replicatio
 	status := comm.SendString(socket, request.SerializeReplication(req))
 	logger.LogFail(status, LogSignTR, trackerNodeObj.id, "sendDataNodePortsToClient(): Failed to send RPQ")
 	logger.LogSuccess(status, LogSignTR, trackerNodeObj.id, "Successfully sent RPQ")
-}
-
-// serializeIPsMaps A function to serialize IP maps
-func getHBConnections(ipsMap map[int]string, Mutex *sync.Mutex) []string {
-	var connectionStrings []string
-
-	Mutex.Lock()
-
-	for _, ip := range ipsMap {
-		connection := "tcp://" + ip + "00"
-		connectionStrings = append(connectionStrings, connection)
-	}
-
-	Mutex.Unlock()
-
-	return connectionStrings
 }

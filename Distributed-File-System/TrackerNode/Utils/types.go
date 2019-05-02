@@ -1,6 +1,7 @@
 package trackernode
 
 import (
+	"database/sql"
 	"time"
 
 	"github.com/pebbe/zmq4"
@@ -29,7 +30,9 @@ type trackerNodeLauncher struct {
 	subscriberSocket       *zmq4.Socket      //A susbscriber socket
 	disconnectionThreshold time.Duration     //A threshold to disconnect a machine
 	datanodeTimeStamps     map[int]time.Time //Keep track of the timestamps
+	datanodeIPs            map[int]string    //Keep tracker of datanode IPs
 	datanodeBasePorts      map[int]string    //Keep track of the datanode base ports
+	db                     *sql.DB           //A handle on the DB
 }
 
 //NewTrackerNode A constructor function for the trackerNode type
@@ -45,16 +48,18 @@ func NewTrackerNode(_id int, _ip string, _requestsPort string, _datanodePort str
 }
 
 // NewTrackerNodeLauncher A constructor function for the trackerNodeLauncher type
-func NewTrackerNodeLauncher(_id int, _ip string, _disconnectionThreshold time.Duration, _trackerIPsPort string) trackerNodeLauncher {
+func NewTrackerNodeLauncher(_id int, _ip string, _disconnectionThreshold time.Duration, _trackerIPsPort string, _db *sql.DB) trackerNodeLauncher {
 	trackerNodeLauncherObj := trackerNodeLauncher{
 		id:                     _id,
 		ip:                     _ip,
 		trackerIPsPort:         _trackerIPsPort,
 		disconnectionThreshold: _disconnectionThreshold,
+		db:                     _db,
 	}
 
 	trackerNodeLauncherObj.datanodeTimeStamps = make(map[int]time.Time)
 	trackerNodeLauncherObj.datanodeBasePorts = make(map[int]string)
+	trackerNodeLauncherObj.datanodeIPs = make(map[int]string)
 
 	return trackerNodeLauncherObj
 }
