@@ -6,10 +6,14 @@ import (
 	logger "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Log"
 	request "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Request"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/pebbe/zmq4"
 )
+
+var lastPickedNode int
+var lastPickedProcess = 1
 
 // ListenToClientRequests A function to listen to client requests
 func (trackerNodeObj *trackerNode) ListenToClientRequests() {
@@ -45,15 +49,35 @@ func (trackerNodeObj *trackerNode) handleRequest(serializedRequest string) {
 	}
 }
 
+// pickUploadDataNode A function pick a datanode to handle an upload request
+func (trackerNodeObj *trackerNode) pickUploadDataNode() (dataNodeRow, int) {
+	res := selectDatanodes(trackerNodeObj.db)
+
+	if lastPickedNode == len(res) {
+		lastPickedNode = 0
+	}
+
+	pickedDN := lastPickedNode
+	lastPickedNode++
+
+	if lastPickedProcess == 3 {
+		lastPickedProcess = 1
+	}
+
+	pickedProcess := lastPickedProcess
+	lastPickedProcess++
+
+	return res[pickedDN], pickedProcess
+}
+
 // uploadRequestHandler A function to handle a request of type Upload
 func (trackerNodeObj *trackerNode) uploadRequestHandler(req request.UploadRequest) {
-	//Should check the DataNode database and choose an alive node
-	//Until I install the DB, I will always assume that the first Data Node is always alive
-	//And I will always pick it
 	logMsg := fmt.Sprintf("Handling upload request #%d, from client #%d", req.ID, req.ClientID)
 	logger.LogMsg(LogSignTR, trackerNodeObj.id, logMsg)
 
-	dataNodeConnectionString := constants.TrackerResponse
+	pickedDN, pickedProcess := trackerNodeObj.pickUploadDataNode()
+
+	dataNodeConnectionString := pickedDN.ip + " " + pickedDN.basePort + strconv.Itoa(pickedProcess) + "1"
 
 	trackerNodeObj.sendDataNodePortsToClient(req, dataNodeConnectionString)
 }

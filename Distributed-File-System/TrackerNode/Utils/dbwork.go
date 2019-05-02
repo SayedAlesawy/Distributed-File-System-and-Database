@@ -35,3 +35,44 @@ func deleteDataNode(db *sql.DB, dataNodeID int) bool {
 
 	return ok
 }
+
+func selectDatanodes(db *sql.DB) []dataNodeRow {
+	sqlStatement := sqlSelectAllDataNodes
+
+	logMsgs := logger.LogInfo{
+		Success: "Datanode list selected Successfully",
+		Error:   "Datanode list selection failed",
+	}
+
+	rows, ok := dbwrapper.ExecuteRowsQuery(db, sqlStatement, logMsgs, false)
+	defer rows.Close()
+
+	var datanodeList []dataNodeRow
+	for rows.Next() {
+		var serialID int
+		var dataNodeID int
+		var ip string
+		var basePort string
+
+		err := rows.Scan(&serialID, &dataNodeID, &ip, &basePort)
+		logger.LogDBErr(err, dbwrapper.LogSign, "selectDatanodes(): Error while extracting results", false)
+
+		res := dataNodeRow{
+			id:       dataNodeID,
+			ip:       ip,
+			basePort: basePort,
+		}
+
+		datanodeList = append(datanodeList, res)
+	}
+
+	err := rows.Err()
+	logger.LogDBErr(err, dbwrapper.LogSign, "selectDatanodes(): Error while extracting results", false)
+	logger.LogDBSuccess(err, dbwrapper.LogSign, "DataNode list extracted successfully")
+
+	if ok == false {
+		datanodeList = []dataNodeRow{}
+	}
+
+	return datanodeList
+}

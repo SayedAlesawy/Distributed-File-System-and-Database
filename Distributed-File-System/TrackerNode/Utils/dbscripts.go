@@ -43,3 +43,6 @@ const sqlInsertFileEntry string = `
 
 // sqlDeleteDataNode SQL to delete a data node from the DataNodes table
 const sqlDeleteDataNode string = `DELETE FROM datanodes WHERE dataNodeID=$1`
+
+// sqlSelectAllDataNodes SQL to select all datanodes
+const sqlSelectAllDataNodes string = `SELECT * FROM datanodes`

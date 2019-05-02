@@ -15,10 +15,11 @@ const LogSignTR string = "[Tracker]"
 
 // trackerNode A struct to represent the basic structure of a Tracker Node
 type trackerNode struct {
-	id           int    //ID of the tracker process
-	ip           string //The IP of the Tracker machine
-	requestsPort string //The requests port of the Tracker machine
-	datanodePort string //The datanode port on the Tracker machine
+	id           int     //ID of the tracker process
+	ip           string  //The IP of the Tracker machine
+	requestsPort string  //The requests port of the Tracker machine
+	datanodePort string  //The datanode port on the Tracker machine
+	db           *sql.DB //A handle on the DB
 }
 
 // heartbeatTrackerNode A struct to represent a Tracker Node that listens to heartbeats
@@ -36,12 +37,13 @@ type trackerNodeLauncher struct {
 }
 
 //NewTrackerNode A constructor function for the trackerNode type
-func NewTrackerNode(_id int, _ip string, _requestsPort string, _datanodePort string) trackerNode {
+func NewTrackerNode(_id int, _ip string, _requestsPort string, _datanodePort string, _db *sql.DB) trackerNode {
 	trackerNodeObj := trackerNode{
 		id:           _id,
 		ip:           _ip,
 		requestsPort: _requestsPort,
 		datanodePort: _datanodePort,
+		db:           _db,
 	}
 
 	return trackerNodeObj
