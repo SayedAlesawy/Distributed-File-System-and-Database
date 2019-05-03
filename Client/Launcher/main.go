@@ -21,8 +21,9 @@ func main() {
 	clientIP := constants.ClientIP
 	clientID, _ := strconv.Atoi(os.Args[1])
 	clientPort := os.Args[2]
+	clientNotifyPort := os.Args[2] + "7"
 
-	clientObj := client.NewClient(clientID, clientIP, clientPort+"0", trackerIP, trackerPorts)
+	clientObj := client.NewClient(clientID, clientIP, clientPort+"0", clientNotifyPort, trackerIP, trackerPorts)
 	clientObj.EstablishConnection()
 
 	log.Println("[Client]", "Successfully launched")
@@ -70,6 +71,10 @@ func main() {
 			clientObj.RSendRequestToDN(arr[0], arr[1], serializeRequest)
 
 			clientObj.SendData(requestObj, arr[0], arr[1])
+
+			notification := clientObj.ReceiveNotification()
+
+			log.Println("[Client #]", clientID, "Received notification:", notification)
 		} else if requestType == "dwn" {
 			requestObj := request.UploadRequest{
 				ID:         requestID,

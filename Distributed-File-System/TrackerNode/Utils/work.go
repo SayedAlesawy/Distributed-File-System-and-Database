@@ -151,6 +151,6 @@ func (trackerNodeObj *trackerNode) completionRequestHandler(req request.Completi
 	insertMetaFile(trackerNodeObj.db, req.FileName, req.ClientID, req.FileSize, req.Location)
 	trackerNodeObj.dbMutex.Unlock()
 
-	//msg := fmt.Sprintf("Successfully uploaded file %s of size %d", req.FileName, req.FileSize)
-	//trackerNodeObj.notifyClient(req.ClientIP, req.ClientPort, msg, req.ClientID)
+	msg := fmt.Sprintf("Successfully uploaded file %s of size %d", req.FileName, req.FileSize)
+	trackerNodeObj.notifyClient(req.ClientIP, req.ClientPort[:3]+"7", msg, req.ClientID)
 }

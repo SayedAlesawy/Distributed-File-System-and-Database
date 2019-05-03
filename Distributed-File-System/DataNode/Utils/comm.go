@@ -18,8 +18,6 @@ func (dataNodeLauncherObj *dataNodeLauncher) establishPublisherConnection() {
 	logger.LogFail(ok, LogSignL, dataNodeLauncherObj.id, "establishPublisherConnection(): Failed to acquire Publisher Socket")
 
 	var connectionString = []string{comm.GetConnectionString(dataNodeLauncherObj.ip, dataNodeLauncherObj.heartbeatPort)}
-	comm.Connect(dataNodeLauncherObj.publisherSocket, connectionString)
-
 	comm.Bind(dataNodeLauncherObj.publisherSocket, connectionString)
 }
 

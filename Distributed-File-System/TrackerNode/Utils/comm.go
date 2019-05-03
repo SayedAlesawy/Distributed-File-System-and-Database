@@ -124,3 +124,18 @@ func (trackerNodeObj *trackerNode) sendReplicationRequest(req request.Replicatio
 	logger.LogFail(status, LogSignTR, trackerNodeObj.id, "sendDataNodePortsToClient(): Failed to send RPQ")
 	logger.LogSuccess(status, LogSignTR, trackerNodeObj.id, "Successfully sent RPQ")
 }
+
+func (trackerNodeObj *trackerNode) notifyClient(ip string, port string, msg string, id int) {
+	socket, ok := comm.Init(zmq4.REQ, "")
+	defer socket.Close()
+	logger.LogFail(ok, LogSignTR, trackerNodeObj.id, "notifyClient(): Failed acquire request socket")
+
+	var connectionString = []string{comm.GetConnectionString(ip, port)}
+	comm.Connect(socket, connectionString)
+
+	logger.LogMsg(LogSignTR, trackerNodeObj.id, fmt.Sprintf("Sending notification to client %d", id))
+
+	status := comm.SendString(socket, msg)
+	logger.LogFail(status, LogSignTR, trackerNodeObj.id, "notifyClient(): Failed to send notification")
+	logger.LogSuccess(status, LogSignTR, trackerNodeObj.id, "Successfully sent notification")
+}
