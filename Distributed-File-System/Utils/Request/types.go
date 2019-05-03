@@ -58,6 +58,7 @@ type ReplicationRequest struct {
 	TargetNodeID       int    //The ID of the target machine
 	TargetNodeIP       string //The IP of the target machine (connect there)
 	TargetNodeBasePort string //The replication port of the target machine (connect there)
+	TrackerPort        string //Port of the tracker process that issued the request
 }
 
 // CompletionRequest Represents a notification of an action completion

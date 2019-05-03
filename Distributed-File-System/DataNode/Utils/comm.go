@@ -147,18 +147,20 @@ func (datanodeObj *dataNode) receiveData(fileName string, ip string, port string
 }
 
 // sendData A function to send Data to the target machine
-func (datanodeObj *dataNode) sendData(fileName string, id int, ip string, port string) {
+func (datanodeObj *dataNode) sendData(fileName string, targetID int, targetIP string, targetPort string, clientID int) {
 	socket, ok := comm.Init(zmq4.REQ, "")
 	defer socket.Close()
 	logger.LogFail(ok, LogSignDN, datanodeObj.id, "sendData(): Failed to acquire request Socket")
 
-	var connectionString = []string{comm.GetConnectionString(ip, port)}
+	var connectionString = []string{comm.GetConnectionString(targetIP, targetPort)}
 	comm.Connect(socket, connectionString)
 
-	file := fileutils.OpenFile(fileName)
+	directory := "Client" + strconv.Itoa(clientID)
+	path := filepath.Join(directory, fileName)
+	file := fileutils.OpenFile(path)
 	defer file.Close()
 
-	chunksCount := fileutils.GetChunksCount(fileName)
+	chunksCount := fileutils.GetChunksCount(path)
 
 	//Send the chunksCount to the DataNode
 	chunkCountStatus := datanodeObj.sendChunkCount(socket, chunksCount)
@@ -184,7 +186,7 @@ func (datanodeObj *dataNode) sendData(fileName string, id int, ip string, port s
 		}
 	}
 
-	logger.LogMsg(LogSignDN, datanodeObj.id, fmt.Sprintf("Successfully replicated file to data node #%d", id))
+	logger.LogMsg(LogSignDN, datanodeObj.id, fmt.Sprintf("Successfully replicated file to data node #%d", targetID))
 }
 
 // sendPieces A function to send a group of pieces to clients
@@ -229,6 +231,22 @@ func (datanodeObj *dataNode) sendCompletionNotifcation(req request.CompletionReq
 	status := comm.SendString(socket, request.SerializeCompletion(req))
 	logger.LogFail(status, LogSignDN, datanodeObj.id, "sendCompletionNotifcation(): Failed to notify tracker of completion")
 	logger.LogSuccess(status, LogSignDN, datanodeObj.id, "Successfully notified tracker of completion")
+
+	return status
+}
+
+// notifyReplicationCompletion A function to notify tracker of replication completion
+func (datanodeObj *dataNode) notifyReplicationCompletion(port string) bool {
+	socket, ok := comm.Init(zmq4.REQ, "")
+	defer socket.Close()
+	logger.LogFail(ok, LogSignDN, datanodeObj.id, "notifyReplicationCompletion(): Failed to acquire request Socket")
+
+	var connectionString = []string{comm.GetConnectionString(datanodeObj.trackerIP, port)}
+	comm.Connect(socket, connectionString)
+
+	status := comm.SendString(socket, "Replication Finished")
+	logger.LogFail(status, LogSignDN, datanodeObj.id, "notifyReplicationCompletion(): Failed to notify tracker of completion")
+	logger.LogSuccess(status, LogSignDN, datanodeObj.id, "Successfully notified tracker of replication completion")
 
 	return status
 }

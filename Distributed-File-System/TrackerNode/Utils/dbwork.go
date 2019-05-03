@@ -92,6 +92,66 @@ func selectDatanodes(db *sql.DB) []dataNodeRow {
 	return datanodeList
 }
 
+// selectDataNode A function to select a datanode
+func selectDataNode(db *sql.DB, id int) (dataNodeRow, bool) {
+	sqlStatement := sqlSelectDataNode
+
+	row := dbwrapper.ExecuteRowQuery(db, sqlStatement, id)
+
+	var serialID int
+	var res dataNodeRow
+
+	err := row.Scan(&serialID, &res.id, &res.ip, &res.basePort)
+	if err == sql.ErrNoRows {
+		return dataNodeRow{}, false
+	}
+
+	return res, true
+}
+
+func selectMetaFiles(db *sql.DB) []fileRow {
+	sqlStatement := sqlSelectAllMetaFiles
+
+	logMsgs := logger.LogInfo{
+		Success: "File list selected Successfully",
+		Error:   "File list selection failed",
+	}
+
+	rows, ok := dbwrapper.ExecuteRowsQuery(db, sqlStatement, logMsgs, false)
+	defer rows.Close()
+
+	var fileList []fileRow
+	for rows.Next() {
+		var serialID int
+		var fileName string
+		var clientID int
+		var fileSize int
+		var location string
+
+		err := rows.Scan(&serialID, &fileName, &clientID, &fileSize, &location)
+		logger.LogDBErr(err, dbwrapper.LogSign, "selectMetaFiles(): Error while extracting results", false)
+
+		res := fileRow{
+			fileName: fileName,
+			clientID: clientID,
+			fileSize: fileSize,
+			location: location,
+		}
+
+		fileList = append(fileList, res)
+	}
+
+	err := rows.Err()
+	logger.LogDBErr(err, dbwrapper.LogSign, "selectMetaFiles(): Error while extracting results", false)
+	logger.LogDBSuccess(err, dbwrapper.LogSign, "File list extracted successfully")
+
+	if ok == false {
+		fileList = []fileRow{}
+	}
+
+	return fileList
+}
+
 // selectMetaFile A function to select a metafile entry
 func selectMetaFile(db *sql.DB, fileName string, clientID int) (fileRow, bool) {
 	sqlStatement := sqlSelectMetaFile
@@ -100,52 +160,26 @@ func selectMetaFile(db *sql.DB, fileName string, clientID int) (fileRow, bool) {
 
 	var serialID int
 	var res fileRow
-	var ret fileRow
-	var status bool
 
-	switch err := row.Scan(&serialID, &res.fileName, &res.clientID, &res.fileSize, &res.location); err {
-	case sql.ErrNoRows:
-		ret = fileRow{}
-		status = false
-	case nil:
-		ret = fileRow{}
-		status = false
-	default:
-		ret = fileRow{}
-		status = false
+	err := row.Scan(&serialID, &res.fileName, &res.clientID, &res.fileSize, &res.location)
+
+	if err == sql.ErrNoRows {
+		return fileRow{}, false
 	}
 
-	ret = res
-	status = true
-
-	return ret, status
+	return res, true
 }
 
-// selectDataNode A function to select a datanode
-func selectDataNode(db *sql.DB, id int) (dataNodeRow, bool) {
-	sqlStatement := sqlSelectAllDataNodes
+// UpdatePeerDownload A function to update the peer-download status
+func updateMetaFile(db *sql.DB, location string, fileName string, clientID int) bool {
+	sqlStatement := sqlUpdateMetaFile
 
-	row := dbwrapper.ExecuteRowQuery(db, sqlStatement, id)
-
-	var serialID int
-	var res dataNodeRow
-	var ret dataNodeRow
-	var status bool
-
-	switch err := row.Scan(&serialID, &res.id, &res.ip, &res.basePort); err {
-	case sql.ErrNoRows:
-		ret = dataNodeRow{}
-		status = false
-	case nil:
-		ret = dataNodeRow{}
-		status = false
-	default:
-		ret = dataNodeRow{}
-		status = false
+	logMsgs := logger.LogInfo{
+		Success: "Updated metafile Successfully",
+		Error:   "Metafile update failed",
 	}
 
-	ret = res
-	status = true
+	ok := dbwrapper.ExecuteQuery(db, sqlStatement, logMsgs, false, location, fileName, clientID)
 
-	return ret, status
+	return ok
 }

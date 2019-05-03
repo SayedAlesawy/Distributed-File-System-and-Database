@@ -125,6 +125,7 @@ func (trackerNodeObj *trackerNode) sendReplicationRequest(req request.Replicatio
 	logger.LogSuccess(status, LogSignTR, trackerNodeObj.id, "Successfully sent RPQ")
 }
 
+// notifyClient A function to notify client of an action compeltion
 func (trackerNodeObj *trackerNode) notifyClient(ip string, port string, msg string, id int) {
 	socket, ok := comm.Init(zmq4.REQ, "")
 	defer socket.Close()
@@ -138,4 +139,19 @@ func (trackerNodeObj *trackerNode) notifyClient(ip string, port string, msg stri
 	status := comm.SendString(socket, msg)
 	logger.LogFail(status, LogSignTR, trackerNodeObj.id, "notifyClient(): Failed to send notification")
 	logger.LogSuccess(status, LogSignTR, trackerNodeObj.id, "Successfully sent notification")
+}
+
+func (trackerNodeObj *trackerNode) recieveReplicationCompletion() bool {
+	socket, ok := comm.Init(zmq4.REP, "")
+	defer socket.Close()
+	logger.LogFail(ok, LogSignTR, trackerNodeObj.id, "recieveReplicationCompletion(): Failed to acquire response Socket")
+
+	var connectionString = []string{comm.GetConnectionString(trackerNodeObj.ip, trackerNodeObj.datanodePort)}
+	comm.Bind(socket, connectionString)
+
+	msg, status := comm.RecvString(socket)
+	logger.LogFail(status, LogSignTR, trackerNodeObj.id, "recieveReplicationCompletion(): Failed to receive replication completion")
+	logger.LogSuccess(status, LogSignTR, trackerNodeObj.id, "Recieved "+msg)
+
+	return status
 }

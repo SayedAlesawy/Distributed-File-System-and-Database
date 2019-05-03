@@ -6,7 +6,9 @@ import (
 	logger "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Log"
 	request "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Request"
 	"fmt"
+	"log"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/pebbe/zmq4"
@@ -109,36 +111,110 @@ func (trackerNodeObj *trackerNode) downloadRequestHandler(req request.UploadRequ
 	trackerNodeObj.sendDataNodePortsToClient(req, downloadPorts)
 }
 
+func (trackerNodeObj *trackerNode) getReplicationSrc(locations []int) (dataNodeRow, bool) {
+	for i := 0; i < len(locations); i++ {
+		trackerNodeObj.dbMutex.Lock()
+		src, srcAlive := selectDataNode(trackerNodeObj.db, locations[i])
+		trackerNodeObj.dbMutex.Unlock()
+
+		if srcAlive == true {
+			return src, true
+		}
+	}
+
+	return dataNodeRow{}, false
+}
+
+func (trackerNodeObj *trackerNode) replicateFile(metafile fileRow) {
+	fields := strings.Fields(metafile.location)
+
+	//The file is fully replicated
+	if len(fields) == 3 {
+		return
+	}
+
+	var locations []int
+	for i := 0; i < len(fields); i++ {
+		id, _ := strconv.Atoi(fields[i])
+		locations = append(locations, id)
+	}
+
+	newLocation := metafile.location
+
+	//The file needs replication
+	for dn := 1; dn <= 3; dn++ {
+		found := false
+		for i := 0; i < len(locations); i++ {
+			if dn == locations[i] {
+				found = true
+				break
+			}
+		}
+		//This dn has the file, no need to replicate
+		if found == true {
+			continue
+		}
+
+		//This dn doesn't have the file, we need to replicate
+
+		//Get the destination node, and check if it's alive
+		trackerNodeObj.dbMutex.Lock()
+		dst, dstAlive := selectDataNode(trackerNodeObj.db, dn)
+		trackerNodeObj.dbMutex.Unlock()
+
+		if dstAlive == false { //If dst isn't alive, then ignore it
+			log.Println("Dst is dead")
+			continue
+		}
+
+		//Dst is alive, let's find a src
+		src, srcAlive := trackerNodeObj.getReplicationSrc(locations)
+		if srcAlive == false { //If there are no alive sources, then ignore it
+			log.Println("Src is dead")
+			continue
+		}
+
+		//We have an alive src and an alive dst
+		//If any of them went down later, then no replication will take place
+		//And the error handling will take care of that
+		repReqObj := request.ReplicationRequest{
+			ID:                 0,
+			Type:               request.Replicate,
+			ClientID:           metafile.clientID,
+			FileName:           metafile.fileName,
+			SourceID:           src.id,
+			TargetNodeID:       dst.id,
+			TargetNodeIP:       dst.ip,
+			TargetNodeBasePort: dst.basePort,
+			TrackerPort:        trackerNodeObj.datanodePort,
+		}
+
+		trackerNodeObj.sendReplicationRequest(repReqObj, src.ip, src.basePort+"21")
+		success := trackerNodeObj.recieveReplicationCompletion()
+
+		if success == true {
+			newLocation += " " + strconv.Itoa(dst.id)
+		}
+	}
+
+	//Update the metafile entry
+	trackerNodeObj.dbMutex.Lock()
+	updateMetaFile(trackerNodeObj.db, newLocation, metafile.fileName, metafile.clientID)
+	trackerNodeObj.dbMutex.Unlock()
+}
+
 // Replicate A function that implements the periodic Replication routine
 func (trackerNodeObj *trackerNode) Replicate() {
-	// Do replication routine logic
-	//1- Check DB for all files' instance counts
-	//2- Run the replication routine for all files that match the critira
-	id := 0
-	clientID := 1
-	fileName := "CA.mp4"
-	sourceIP := constants.DataNodeLauncherIP
-	targetIP := constants.DataNodeLauncherIP
-	sourcePort := "7021"
-	targetBasePort := "60"
-	sourceID := 1
-	targetNodeID := 2
-
 	for range time.Tick(constants.ReplicationRoutineFrequency) {
 		logger.LogMsg(LogSignL, trackerNodeObj.id, "Replication Routine, running ...")
 
-		repReqObj := request.ReplicationRequest{
-			ID:                 id,
-			Type:               request.Replicate,
-			ClientID:           clientID,
-			FileName:           fileName,
-			SourceID:           sourceID,
-			TargetNodeID:       targetNodeID,
-			TargetNodeIP:       targetIP,
-			TargetNodeBasePort: targetBasePort,
-		}
+		trackerNodeObj.dbMutex.Lock()
+		metaFiles := selectMetaFiles(trackerNodeObj.db)
+		trackerNodeObj.dbMutex.Unlock()
 
-		trackerNodeObj.sendReplicationRequest(repReqObj, sourceIP, sourcePort)
+		for _, metaFile := range metaFiles {
+			trackerNodeObj.replicateFile(metaFile)
+		}
 	}
 }
 

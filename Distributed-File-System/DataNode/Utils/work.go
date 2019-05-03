@@ -83,10 +83,13 @@ func (datanodeObj *dataNode) replicationRequestHandler(req request.ReplicationRe
 	if req.SourceID == datanodeObj.id {
 		log.Println("I am source")
 		datanodeObj.sendReplicationRequest(req)
-		datanodeObj.sendData(req.FileName, req.TargetNodeID, req.TargetNodeIP, req.TargetNodeBasePort+"24")
+		datanodeObj.sendData(req.FileName, req.TargetNodeID, req.TargetNodeIP, req.TargetNodeBasePort+"24", req.ClientID)
+		datanodeObj.notifyReplicationCompletion(req.TrackerPort)
+
 	} else if req.TargetNodeID == datanodeObj.id {
 		log.Println("I am dest")
 		datanodeObj.receiveData(req.FileName, datanodeObj.ip, datanodeObj.repUpPort, req.ClientID, 2)
+
 	} else {
 		logger.LogMsg(LogSignDN, datanodeObj.id, "Malformed replication request")
 	}

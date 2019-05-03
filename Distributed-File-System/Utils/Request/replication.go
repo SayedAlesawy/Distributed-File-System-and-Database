@@ -16,7 +16,8 @@ func SerializeReplication(request ReplicationRequest) string {
 		strconv.Itoa(request.SourceID) + " " +
 		strconv.Itoa(request.TargetNodeID) + " " +
 		request.TargetNodeIP + " " +
-		request.TargetNodeBasePort
+		request.TargetNodeBasePort + " " +
+		request.TrackerPort
 
 	return serializedRequest
 }
@@ -43,6 +44,7 @@ func DeserializeReplication(serializedRequest string) ReplicationRequest {
 		TargetNodeID:       targetNodeID,
 		TargetNodeIP:       fields[6],
 		TargetNodeBasePort: fields[7],
+		TrackerPort:        fields[8],
 	}
 
 	return requestObj
@@ -59,5 +61,6 @@ func PrintReplication(request ReplicationRequest) {
 	fmt.Println("  TargetNodeID = ", request.TargetNodeID)
 	fmt.Println("  TargetNodeIP = ", request.TargetNodeIP)
 	fmt.Println("  TargetNodeBasePort = ", request.TargetNodeBasePort)
+	fmt.Println("  TrackerPort = ", request.TrackerPort)
 	fmt.Println()
 }

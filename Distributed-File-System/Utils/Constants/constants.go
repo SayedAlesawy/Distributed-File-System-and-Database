@@ -24,7 +24,7 @@ var DisconnectionThreshold = time.Duration(2*time.Second + 1)
 var TrackerResponse = DataNodeLauncherIP + " " + "7011"
 
 // ReplicationRoutineFrequency The time after which the replication routine runs
-var ReplicationRoutineFrequency = time.Duration(30 * time.Minute)
+var ReplicationRoutineFrequency = time.Duration(1 * time.Minute)
 
 var DownloadIP1 = DataNodeLauncherIP
 var DownloadPort1 = "701"

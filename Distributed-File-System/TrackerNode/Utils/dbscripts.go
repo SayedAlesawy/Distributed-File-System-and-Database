@@ -47,6 +47,22 @@ const sqlDeleteDataNode string = `DELETE FROM datanodes WHERE dataNodeID=$1`
 // sqlSelectAllDataNodes SQL to select all datanodes
 const sqlSelectAllDataNodes string = `SELECT * FROM datanodes`
 
+// sqlSelectDataNode SQL to select a datanode indentified by its ID
+const sqlSelectDataNode string = `
+	SELECT * FROM datanodes WHERE dataNodeID=$1
+`
+
+// sqlSelectAllMetaFiles SQL to select all entries in the metafile table
+const sqlSelectAllMetaFiles string = `SELECT * FROM metafiles`
+
+// sqlSelectMetaFile SQL to select a meta file entry
 const sqlSelectMetaFile string = `
 	SELECT * FROM metafiles WHERE fileName = $1 and clientID = $2
+`
+
+// sqlUpdateMetaFile SQL to update a metafile entry
+const sqlUpdateMetaFile string = `
+	UPDATE metafiles
+	SET location = $1
+	WHERE fileName = $2 AND clientID = $3; 
 `
