@@ -56,7 +56,7 @@ func (datanodeObj *dataNode) handleRequest(serializedRequest string) {
 func (datanodeObj *dataNode) uploadRequestHandler(req request.UploadRequest) {
 	logger.LogMsg(LogSignDN, datanodeObj.id, "Upload Request Handler Started")
 
-	fileSize := datanodeObj.receiveData(req.FileName, req.ClientIP, req.ClientPort, 1)
+	fileSize := datanodeObj.receiveData(req.FileName, req.ClientIP, req.ClientPort, req.ClientID, 1)
 	location := strconv.Itoa(datanodeObj.id)
 
 	compReq := request.CompletionRequest{
@@ -86,7 +86,7 @@ func (datanodeObj *dataNode) replicationRequestHandler(req request.ReplicationRe
 		datanodeObj.sendData(req.FileName, req.TargetNodeID, req.TargetNodeIP, req.TargetNodeBasePort+"24")
 	} else if req.TargetNodeID == datanodeObj.id {
 		log.Println("I am dest")
-		datanodeObj.receiveData(req.FileName, datanodeObj.ip, datanodeObj.repUpPort, 2)
+		datanodeObj.receiveData(req.FileName, datanodeObj.ip, datanodeObj.repUpPort, req.ClientID, 2)
 	} else {
 		logger.LogMsg(LogSignDN, datanodeObj.id, "Malformed replication request")
 	}

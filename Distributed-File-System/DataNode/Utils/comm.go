@@ -6,6 +6,7 @@ import (
 	logger "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Log"
 	request "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Request"
 	"fmt"
+	"path/filepath"
 	"strconv"
 
 	"github.com/pebbe/zmq4"
@@ -103,7 +104,7 @@ func (datanodeObj *dataNode) sendDataChunk(socket *zmq4.Socket, data []byte, chu
 	return status
 }
 
-func (datanodeObj *dataNode) receiveData(fileName string, ip string, port string, dir int) int {
+func (datanodeObj *dataNode) receiveData(fileName string, ip string, port string, clientID int, dir int) int {
 	socket, ok := comm.Init(zmq4.REP, "")
 	defer socket.Close()
 	logger.LogFail(ok, LogSignDN, datanodeObj.id, "receiveDataFromClient(): Failed to acquire response Socket")
@@ -115,7 +116,11 @@ func (datanodeObj *dataNode) receiveData(fileName string, ip string, port string
 		comm.Bind(socket, connectionString)
 	}
 
-	file := fileutils.CreateFile(fileName)
+	directory := "Client" + strconv.Itoa(clientID)
+	fileutils.CreateDirectory(directory)
+
+	path := filepath.Join(directory, fileName)
+	file := fileutils.CreateFile(path)
 	defer file.Close()
 
 	chunkCount, chunkCountStatus := datanodeObj.receiveChunkCount(socket)
