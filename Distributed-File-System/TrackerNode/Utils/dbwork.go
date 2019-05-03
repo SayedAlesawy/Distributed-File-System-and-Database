@@ -50,6 +50,7 @@ func deleteDataNode(db *sql.DB, dataNodeID int) bool {
 	return ok
 }
 
+// selectDatanodes A function to select all datanodes
 func selectDatanodes(db *sql.DB) []dataNodeRow {
 	sqlStatement := sqlSelectAllDataNodes
 
@@ -89,4 +90,62 @@ func selectDatanodes(db *sql.DB) []dataNodeRow {
 	}
 
 	return datanodeList
+}
+
+// selectMetaFile A function to select a metafile entry
+func selectMetaFile(db *sql.DB, fileName string, clientID int) (fileRow, bool) {
+	sqlStatement := sqlSelectMetaFile
+
+	row := dbwrapper.ExecuteRowQuery(db, sqlStatement, fileName, clientID)
+
+	var serialID int
+	var res fileRow
+	var ret fileRow
+	var status bool
+
+	switch err := row.Scan(&serialID, &res.fileName, &res.clientID, &res.fileSize, &res.location); err {
+	case sql.ErrNoRows:
+		ret = fileRow{}
+		status = false
+	case nil:
+		ret = fileRow{}
+		status = false
+	default:
+		ret = fileRow{}
+		status = false
+	}
+
+	ret = res
+	status = true
+
+	return ret, status
+}
+
+// selectDataNode A function to select a datanode
+func selectDataNode(db *sql.DB, id int) (dataNodeRow, bool) {
+	sqlStatement := sqlSelectAllDataNodes
+
+	row := dbwrapper.ExecuteRowQuery(db, sqlStatement, id)
+
+	var serialID int
+	var res dataNodeRow
+	var ret dataNodeRow
+	var status bool
+
+	switch err := row.Scan(&serialID, &res.id, &res.ip, &res.basePort); err {
+	case sql.ErrNoRows:
+		ret = dataNodeRow{}
+		status = false
+	case nil:
+		ret = dataNodeRow{}
+		status = false
+	default:
+		ret = dataNodeRow{}
+		status = false
+	}
+
+	ret = res
+	status = true
+
+	return ret, status
 }

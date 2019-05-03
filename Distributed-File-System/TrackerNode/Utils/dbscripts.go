@@ -46,3 +46,7 @@ const sqlDeleteDataNode string = `DELETE FROM datanodes WHERE dataNodeID=$1`
 
 // sqlSelectAllDataNodes SQL to select all datanodes
 const sqlSelectAllDataNodes string = `SELECT * FROM datanodes`
+
+const sqlSelectMetaFile string = `
+	SELECT * FROM metafiles WHERE fileName = $1 and clientID = $2
+`
