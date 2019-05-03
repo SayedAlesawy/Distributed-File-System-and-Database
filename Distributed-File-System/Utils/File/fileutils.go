@@ -102,6 +102,24 @@ func DeleteFile(fileName string) {
 	logErr(err)
 }
 
+// IsThere A function to check of a file/folder exists
+func IsThere(fileName string) bool {
+	_, err := os.Stat(fileName)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false
+		}
+	}
+	return true
+}
+
+// CreateDirectory A function to create a directory
+func CreateDirectory(fileName string) {
+	if !IsThere(fileName) {
+		os.Mkdir(fileName, os.ModePerm)
+	}
+}
+
 // AssembleFile A function to assemble pieces into a single file
 func AssembleFile(outputFileName string, pieceName string, extension string, blockCount int) {
 	outFile := CreateFile(outputFileName)

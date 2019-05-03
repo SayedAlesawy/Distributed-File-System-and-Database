@@ -139,9 +139,6 @@ func (trackerNodeObj *trackerNode) Replicate() {
 		}
 
 		trackerNodeObj.sendReplicationRequest(repReqObj, sourceIP, sourcePort)
-
-		targetBasePort = "50"
-		targetNodeID = 3
 	}
 }
 
