@@ -105,7 +105,7 @@ func (datanodeObj *dataNode) sendDataChunk(socket *zmq4.Socket, data []byte, chu
 	return status
 }
 
-func (datanodeObj *dataNode) receiveData(fileName string, ip string, port string, dir int) {
+func (datanodeObj *dataNode) receiveData(fileName string, ip string, port string, dir int) int {
 	socket, ok := comm.Init(zmq4.REP, "")
 	defer socket.Close()
 	logger.LogFail(ok, LogSignDN, datanodeObj.id, "receiveDataFromClient(): Failed to acquire response Socket")
@@ -124,7 +124,7 @@ func (datanodeObj *dataNode) receiveData(fileName string, ip string, port string
 
 	if chunkCountStatus == false {
 		logger.LogMsg(LogSignDN, datanodeObj.id, "receiveDataFromClient(): Abort!")
-		return
+		return 0
 	}
 
 	for i := 0; i < chunkCount; i++ {
@@ -132,13 +132,15 @@ func (datanodeObj *dataNode) receiveData(fileName string, ip string, port string
 
 		if chunkStatus == false {
 			logger.LogMsg(LogSignDN, datanodeObj.id, "receiveDataFromClient(): Abort!")
-			return
+			return 0
 		}
 
 		fileutils.WriteChunk(file, chunk)
 	}
 
 	logger.LogMsg(LogSignDN, datanodeObj.id, "File received")
+
+	return chunkCount
 }
 
 // sendData A function to send Data to the target machine
@@ -210,4 +212,20 @@ func (datanodeObj *dataNode) sendPieces(req request.UploadRequest, start int, ch
 	}
 
 	logger.LogMsg(LogSignDN, datanodeObj.id, fmt.Sprintf("Successfully sent pieces to client #%d", req.ClientID))
+}
+
+// sendCompletionNotifcation A function to notify the tracker of an action completion
+func (datanodeObj *dataNode) sendCompletionNotifcation(req request.CompletionRequest) bool {
+	socket, ok := comm.Init(zmq4.REQ, "")
+	defer socket.Close()
+	logger.LogFail(ok, LogSignDN, datanodeObj.id, "sendCompletionNotifcation(): Failed to acquire request Socket")
+
+	var connectionString = []string{comm.GetConnectionString(datanodeObj.trackerIP, datanodeObj.trackerPorts[1])}
+	comm.Connect(socket, connectionString)
+
+	status := comm.SendString(socket, request.SerializeCompletion(req))
+	logger.LogFail(status, LogSignDN, datanodeObj.id, "sendCompletionNotifcation(): Failed to notify tracker of completion")
+	logger.LogSuccess(status, LogSignDN, datanodeObj.id, "Successfully notified tracker of completion")
+
+	return status
 }

@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/pebbe/zmq4"
@@ -21,30 +20,30 @@ func (trackerNodeLauncherObj *trackerNodeLauncher) establishSubscriberConnection
 }
 
 // serializeIPsMaps A function to serialize IP maps
-func (trackerNodeLauncherObj *trackerNodeLauncher) getHBConnections(ipMutex *sync.Mutex, portMutex *sync.Mutex) []string {
+func (trackerNodeLauncherObj *trackerNodeLauncher) getHBConnections() []string {
 	var connectionStrings []string
 
-	ipMutex.Lock()
-	portMutex.Lock()
+	trackerNodeLauncherObj.ipsMutex.Lock()
+	trackerNodeLauncherObj.portsMutex.Lock()
 
 	for id, ip := range trackerNodeLauncherObj.datanodeIPs {
 		connection := comm.GetConnectionString(ip, trackerNodeLauncherObj.datanodeBasePorts[id]+"00")
 		connectionStrings = append(connectionStrings, connection)
 	}
 
-	portMutex.Unlock()
-	ipMutex.Unlock()
+	trackerNodeLauncherObj.portsMutex.Unlock()
+	trackerNodeLauncherObj.ipsMutex.Unlock()
 
 	return connectionStrings
 }
 
 // updateSubscriberConnection A function to update the heartbeat susbcription list
-func (trackerNodeLauncherObj *trackerNodeLauncher) updateSubscriberConnection(ipMutex *sync.Mutex, portsMutex *sync.Mutex) {
-	comm.Connect(trackerNodeLauncherObj.subscriberSocket, trackerNodeLauncherObj.getHBConnections(ipMutex, portsMutex))
+func (trackerNodeLauncherObj *trackerNodeLauncher) updateSubscriberConnection() {
+	comm.Connect(trackerNodeLauncherObj.subscriberSocket, trackerNodeLauncherObj.getHBConnections())
 }
 
 // ReceiveHandshake A function to constantly check for incoming datanode handshakes
-func (trackerNodeLauncherObj *trackerNodeLauncher) ReceiveHandshake(ipMutex *sync.Mutex, portsMutex *sync.Mutex, timeStampsMutex *sync.Mutex, dbMutex *sync.Mutex) {
+func (trackerNodeLauncherObj *trackerNodeLauncher) ReceiveHandshake() {
 	socket, ok := comm.Init(zmq4.REP, "")
 	defer socket.Close()
 	logger.LogFail(ok, LogSignL, trackerNodeLauncherObj.id, "ReceiveHandshake(): Failed to acquire response Socket")
@@ -63,21 +62,21 @@ func (trackerNodeLauncherObj *trackerNodeLauncher) ReceiveHandshake(ipMutex *syn
 			incomingID, convErr := strconv.Atoi(fields[1])
 			logger.LogErr(convErr, LogSignL, trackerNodeLauncherObj.id, "ReceiveHandshake(): Failed to convert incoming ID")
 
-			ipMutex.Lock()
+			trackerNodeLauncherObj.ipsMutex.Lock()
 			trackerNodeLauncherObj.datanodeIPs[incomingID] = incomingIP
-			ipMutex.Unlock()
+			trackerNodeLauncherObj.ipsMutex.Unlock()
 
-			portsMutex.Lock()
+			trackerNodeLauncherObj.portsMutex.Lock()
 			trackerNodeLauncherObj.datanodeBasePorts[incomingID] = incomingBasePort
-			portsMutex.Unlock()
+			trackerNodeLauncherObj.portsMutex.Unlock()
 
-			timeStampsMutex.Lock()
+			trackerNodeLauncherObj.timeStampMutex.Lock()
 			trackerNodeLauncherObj.datanodeTimeStamps[incomingID] = time.Now()
-			timeStampsMutex.Unlock()
+			trackerNodeLauncherObj.timeStampMutex.Unlock()
 
-			dbMutex.Lock()
+			trackerNodeLauncherObj.dbMutex.Lock()
 			insertDataNode(trackerNodeLauncherObj.db, incomingID, incomingIP, incomingBasePort)
-			dbMutex.Unlock()
+			trackerNodeLauncherObj.dbMutex.Unlock()
 
 			logMsg := fmt.Sprintf("Received IP = %s from data node#%d", incomingIP+":"+incomingBasePort+"00", incomingID)
 			logger.LogMsg(LogSignL, 0, logMsg)
@@ -108,6 +107,7 @@ func (trackerNodeObj *trackerNode) sendDataNodePortsToClient(req request.UploadR
 	logger.LogMsg(LogSignTR, trackerNodeObj.id, fmt.Sprintf("Responded to request#%d, from client #%d", req.ID, req.ClientID))
 }
 
+// sendReplicationRequest A function to send a replication request
 func (trackerNodeObj *trackerNode) sendReplicationRequest(req request.ReplicationRequest, sourceIP string, sourcePort string) {
 	socket, ok := comm.Init(zmq4.REQ, "")
 	defer socket.Close()

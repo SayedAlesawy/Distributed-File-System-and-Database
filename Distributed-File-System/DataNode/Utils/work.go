@@ -35,15 +35,18 @@ func (datanodeObj *dataNode) handleRequest(serializedRequest string) {
 	if reqType == request.Upload {
 		req := request.DeserializeUpload(serializedRequest)
 		datanodeObj.uploadRequestHandler(req)
+
 	} else if reqType == request.Download {
 		req := request.DeserializeUpload(serializedRequest)
 		arr := strings.Fields(serializedRequest)
 		start, _ := strconv.Atoi(arr[6])
 		chunkCount, _ := strconv.Atoi(arr[7])
 		datanodeObj.downloadRequestHandler(req, start, chunkCount)
+
 	} else if reqType == request.Replicate {
 		req := request.DeserializeReplication(serializedRequest)
 		datanodeObj.replicationRequestHandler(req)
+
 	} else if reqType == request.Invalid {
 		logger.LogMsg(LogSignDN, datanodeObj.id, "Invalid Request")
 		return
@@ -53,7 +56,20 @@ func (datanodeObj *dataNode) handleRequest(serializedRequest string) {
 func (datanodeObj *dataNode) uploadRequestHandler(req request.UploadRequest) {
 	logger.LogMsg(LogSignDN, datanodeObj.id, "Upload Request Handler Started")
 
-	datanodeObj.receiveData(req.FileName, req.ClientIP, req.ClientPort, 1)
+	fileSize := datanodeObj.receiveData(req.FileName, req.ClientIP, req.ClientPort, 1)
+	location := strconv.Itoa(datanodeObj.id)
+
+	compReq := request.CompletionRequest{
+		Type:       request.Completion,
+		ClientID:   req.ClientID,
+		ClientIP:   req.ClientIP,
+		ClientPort: req.ClientPort,
+		FileName:   req.FileName,
+		FileSize:   fileSize,
+		Location:   location,
+	}
+
+	datanodeObj.sendCompletionNotifcation(compReq)
 }
 
 func (datanodeObj *dataNode) downloadRequestHandler(req request.UploadRequest, start int, chunksCount int) {

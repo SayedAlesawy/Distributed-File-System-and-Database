@@ -17,7 +17,7 @@ const SQLCreateMetaFile string = `
 	fileName varchar(60) NOT NULL,
 	clientID int NOT NULL,
 	fileSize int NOT NULL, 
-	location int NOT NULL
+	location varchar(60) NOT NULL
 	);
 	ALTER TABLE metafiles
 	ADD CONSTRAINT unq_filename_clientid UNIQUE(fileName, clientID);

@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"sync"
 )
 
 func main() {
@@ -22,7 +23,8 @@ func main() {
 	db := dbwrapper.ConnectDB()
 	defer db.Close()
 
-	trackerNodeObj := trackernode.NewTrackerNode(id, ip, reqPort, dnPort, db)
+	var dbMutex sync.Mutex
+	trackerNodeObj := trackernode.NewTrackerNode(id, ip, reqPort, dnPort, db, &dbMutex)
 
 	log.Println(trackernode.LogSignTR, args[2], "Successfully launched")
 

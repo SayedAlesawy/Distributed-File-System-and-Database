@@ -21,6 +21,9 @@ const (
 	//Replicate A replication request
 	Replicate Type = "rep"
 
+	//Completion An action completion notification
+	Completion Type = "comp"
+
 	//Invalid An error type
 	Invalid Type = "inv"
 )
@@ -57,18 +60,36 @@ type ReplicationRequest struct {
 	TargetNodeBasePort string //The replication port of the target machine (connect there)
 }
 
+// CompletionRequest Represents a notification of an action completion
+type CompletionRequest struct {
+	Type       Type   //The request type
+	ClientID   int    //The ID for the client
+	ClientIP   string //The IP of the client
+	ClientPort string //The port of the client
+	FileName   string //The name of the file
+	FileSize   int    //The size of the file
+	Location   string //A concatenated string of all locations where the file exists
+}
+
 // GetType A function to get the type of a request
 func GetType(req string) Type {
 	reqType := strings.Fields(req)[0]
 
 	if reqType == "dwn" {
 		return Download
+
 	} else if reqType == "up" {
 		return Upload
+
 	} else if reqType == "ls" {
 		return Display
+
 	} else if reqType == "rep" {
 		return Replicate
+
+	} else if reqType == "comp" {
+		return Completion
+
 	} else {
 		return Invalid
 	}

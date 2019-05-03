@@ -7,9 +7,10 @@ type dataNodeRow struct {
 	basePort string
 }
 
+// fileRow Represents a file entry row in the Database
 type fileRow struct {
 	fileName string
-	clientID string
+	clientID int
 	fileSize int
 	location string
 }

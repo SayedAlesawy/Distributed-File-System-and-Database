@@ -50,20 +50,21 @@ func main() {
 	dbwrapper.CleanUP(db, trackernode.SQLDropDataNodesTable+trackernode.SQLDropMetaFileTable)
 	dbwrapper.Migrate(db, trackernode.SQLCreateDataNodesTable+trackernode.SQLCreateMetaFile)
 
-	trackerNodeLauncherObj := trackernode.NewTrackerNodeLauncher(masterTrackerID, masterTrackerIP, disconnectionThreshold, ipListenerPort, db)
-
-	log.Println(trackernode.LogSignL, "Successfully launched")
-
-	launchTrackers()
-
 	var portsMutex sync.Mutex
 	var ipMutex sync.Mutex
 	var timeStampsMutex sync.Mutex
 	var dbMutex sync.Mutex
 
-	go trackerNodeLauncherObj.ReceiveHandshake(&ipMutex, &portsMutex, &timeStampsMutex, &dbMutex)
+	trackerNodeLauncherObj := trackernode.NewTrackerNodeLauncher(masterTrackerID, masterTrackerIP, disconnectionThreshold,
+		ipListenerPort, db, &timeStampsMutex, &ipMutex, &portsMutex, &dbMutex)
 
-	go trackerNodeLauncherObj.UpdateDataNodeAliveStatus(&ipMutex, &portsMutex, &timeStampsMutex, &dbMutex)
+	log.Println(trackernode.LogSignL, "Successfully launched")
 
-	trackerNodeLauncherObj.ListenToHeartbeats(&ipMutex, &portsMutex, &timeStampsMutex)
+	launchTrackers()
+
+	go trackerNodeLauncherObj.ReceiveHandshake()
+
+	go trackerNodeLauncherObj.UpdateDataNodeAliveStatus()
+
+	trackerNodeLauncherObj.ListenToHeartbeats()
 }

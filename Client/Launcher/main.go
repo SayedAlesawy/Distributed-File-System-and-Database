@@ -70,7 +70,6 @@ func main() {
 			clientObj.RSendRequestToDN(arr[0], arr[1], serializeRequest)
 
 			clientObj.SendData(requestObj, arr[0], arr[1])
-
 		} else if requestType == "dwn" {
 			requestObj := request.UploadRequest{
 				ID:         requestID,

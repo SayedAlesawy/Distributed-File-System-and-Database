@@ -22,6 +22,20 @@ func insertDataNode(db *sql.DB, dataNodeID int, ip string, basePort string) bool
 	return ok
 }
 
+// insertMetaFile A function to insert a meta file entry into the Database
+func insertMetaFile(db *sql.DB, fileName string, clientID int, filseSize int, location string) bool {
+	sqlStatement := sqlInsertFileEntry
+
+	logMsgs := logger.LogInfo{
+		Success: fmt.Sprintf("Successfully insert file: %s of client %d", fileName, clientID),
+		Error:   fmt.Sprintf("Failed to insert file: %s of client %d", fileName, clientID),
+	}
+
+	ok := dbwrapper.ExecuteQuery(db, sqlStatement, logMsgs, false, fileName, clientID, filseSize, location)
+
+	return ok
+}
+
 // deleteDataNode A function to delete a data node from the DataNodes table
 func deleteDataNode(db *sql.DB, dataNodeID int) bool {
 	sqlStatement := sqlDeleteDataNode

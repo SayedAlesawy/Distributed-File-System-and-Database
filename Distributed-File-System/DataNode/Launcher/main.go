@@ -19,7 +19,7 @@ var trackerIP = constants.TrackerIP
 
 var trackerIPsPort = constants.TrackerIPsPort
 
-var trackerDNPorts = constants.TrackerDNPorts
+var trackerDNPorts = constants.TrackerReqPorts
 
 func getTrackerParams() string {
 	trackerParams := trackerIP + " " + trackerDNPorts[0] + " " + trackerDNPorts[1]

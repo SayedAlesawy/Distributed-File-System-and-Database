@@ -40,9 +40,16 @@ func (trackerNodeObj *trackerNode) handleRequest(serializedRequest string) {
 	if reqType == request.Upload {
 		req := request.DeserializeUpload(serializedRequest)
 		trackerNodeObj.uploadRequestHandler(req)
+
 	} else if reqType == request.Download {
 		req := request.DeserializeUpload(serializedRequest)
 		trackerNodeObj.downloadRequestHandler(req)
+
+	} else if reqType == request.Completion {
+		req := request.DeserializeCompletion(serializedRequest)
+
+		trackerNodeObj.completionRequestHandler(req)
+
 	} else if reqType == request.Invalid {
 		logger.LogMsg(LogSignTR, trackerNodeObj.id, "Invalid Request")
 		return
@@ -51,9 +58,10 @@ func (trackerNodeObj *trackerNode) handleRequest(serializedRequest string) {
 
 // pickUploadDataNode A function pick a datanode to handle an upload request
 func (trackerNodeObj *trackerNode) pickUploadDataNode() (dataNodeRow, int) {
+	trackerNodeObj.dbMutex.Lock()
 	res := selectDatanodes(trackerNodeObj.db)
 
-	if lastPickedNode == len(res) {
+	if lastPickedNode >= len(res) {
 		lastPickedNode = 0
 	}
 
@@ -66,6 +74,7 @@ func (trackerNodeObj *trackerNode) pickUploadDataNode() (dataNodeRow, int) {
 
 	pickedProcess := lastPickedProcess
 	lastPickedProcess++
+	trackerNodeObj.dbMutex.Unlock()
 
 	return res[pickedDN], pickedProcess
 }
@@ -134,4 +143,14 @@ func (trackerNodeObj *trackerNode) Replicate() {
 		targetBasePort = "50"
 		targetNodeID = 3
 	}
+}
+
+// completionRequestHandler A function to handle the completion notifications
+func (trackerNodeObj *trackerNode) completionRequestHandler(req request.CompletionRequest) {
+	trackerNodeObj.dbMutex.Lock()
+	insertMetaFile(trackerNodeObj.db, req.FileName, req.ClientID, req.FileSize, req.Location)
+	trackerNodeObj.dbMutex.Unlock()
+
+	//msg := fmt.Sprintf("Successfully uploaded file %s of size %d", req.FileName, req.FileSize)
+	//trackerNodeObj.notifyClient(req.ClientIP, req.ClientPort, msg, req.ClientID)
 }
