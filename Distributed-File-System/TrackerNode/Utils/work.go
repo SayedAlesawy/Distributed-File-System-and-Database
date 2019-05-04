@@ -59,9 +59,13 @@ func (trackerNodeObj *trackerNode) handleRequest(serializedRequest string) {
 }
 
 // pickUploadDataNode A function pick a datanode to handle an upload request
-func (trackerNodeObj *trackerNode) pickUploadDataNode() (dataNodeRow, int) {
+func (trackerNodeObj *trackerNode) pickUploadDataNode() (dataNodeRow, int, bool) {
 	trackerNodeObj.dbMutex.Lock()
 	res := selectDatanodes(trackerNodeObj.db)
+
+	if len(res) == 0 {
+		return dataNodeRow{}, 0, false
+	}
 
 	if lastPickedNode >= len(res) {
 		lastPickedNode = 0
@@ -78,7 +82,7 @@ func (trackerNodeObj *trackerNode) pickUploadDataNode() (dataNodeRow, int) {
 	lastPickedProcess++
 	trackerNodeObj.dbMutex.Unlock()
 
-	return res[pickedDN], pickedProcess
+	return res[pickedDN], pickedProcess, true
 }
 
 // uploadRequestHandler A function to handle a request of type Upload
@@ -86,10 +90,15 @@ func (trackerNodeObj *trackerNode) uploadRequestHandler(req request.UploadReques
 	logMsg := fmt.Sprintf("Handling upload request #%d, from client #%d", req.ID, req.ClientID)
 	logger.LogMsg(LogSignTR, trackerNodeObj.id, logMsg)
 
-	pickedDN, pickedProcess := trackerNodeObj.pickUploadDataNode()
+	pickedDN, pickedProcess, atleast := trackerNodeObj.pickUploadDataNode()
+
+	if atleast == false {
+		msg := "All data nodes are offline"
+		trackerNodeObj.sendDataNodePortsToClient(req, msg)
+		return
+	}
 
 	dataNodeConnectionString := pickedDN.ip + " " + pickedDN.basePort + strconv.Itoa(pickedProcess) + "1"
-
 	trackerNodeObj.sendDataNodePortsToClient(req, dataNodeConnectionString)
 }
 

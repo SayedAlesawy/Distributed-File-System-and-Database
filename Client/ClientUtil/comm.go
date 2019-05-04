@@ -6,142 +6,164 @@ import (
 	logger "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Log"
 	request "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Request"
 	"fmt"
-	"log"
 	"strconv"
+	"time"
 
 	"github.com/pebbe/zmq4"
 )
 
-// getSocket A function to obtain a comm socket
-func (clientObj *client) getSocket() {
-	socket, err := zmq4.NewSocket(zmq4.REQ)
-
-	if err != nil {
-		log.Printf("[Client #%d] Failed to acquire a Socket\n", clientObj.id)
-		return
-	}
-
-	clientObj.socket = socket
-}
-
 // EstablishConnection A function to establish communication with all Tracker ports
 func (clientObj *client) EstablishConnection() {
-	clientObj.getSocket()
+	socket, ok := comm.Init(zmq4.REQ, "")
+	logger.LogFail(ok, LogSign, clientObj.id, "EstablishConnection(): Failed to acquire request Socket")
+
+	clientObj.socket = socket
+
+	var connectionString []string
 
 	for _, port := range clientObj.trackerPorts {
-		connectionString := "tcp://" + clientObj.trackerIP + ":" + port
-
-		clientObj.socket.Connect(connectionString)
-
-		log.Println("[Client]", "Connected to Tracker with port = ", port)
-	}
-}
-
-// SendRequest A function to send a request to Tracker
-func (clientObj *client) SendRequest(serializedRequest string) {
-	acknowledge := ""
-
-	for acknowledge != "ACK" {
-		log.Printf("[Client #%d] Sending Request\n", clientObj.id)
-
-		clientObj.socket.Send(serializedRequest, 0)
-
-		acknowledge, _ = clientObj.socket.Recv(0)
-
-		if acknowledge != "ACK" {
-			log.Printf("[Client #%d] Failed to send request to Tracker ... Trying again\n", clientObj.id)
-		}
+		connectionString = append(connectionString, comm.GetConnectionString(clientObj.trackerIP, port))
 	}
 
-	log.Printf("[Client #%d] Successfully sent request to Tracker\n", clientObj.id)
+	comm.Connect(socket, connectionString)
+	logger.LogMsg(LogSign, clientObj.id, "Successfully connected to tracker ports")
 }
 
-// ReceiveResponse A function to receive the response sent by the Tracker
-func (clientObj *client) ReceiveResponse() string {
-	socket, _ := zmq4.NewSocket(zmq4.REP)
+// SendRequest A function to send a request to Tracker [Timeout after 30 secs]
+func (clientObj *client) SendRequest(serializedRequest string) bool {
+	logger.LogMsg(LogSign, clientObj.id, "Sending Request to tracker")
+	var sendStatus = false
+
+	sendChan := make(chan bool, 1)
+	go func() {
+		sendStatus = comm.SendString(clientObj.socket, serializedRequest)
+		sendChan <- sendStatus
+	}()
+	select {
+	case <-sendChan:
+	case <-time.After(30 * time.Second):
+		logger.LogMsg(LogSign, clientObj.id, "Sending request to tracker timedout after 30 secs")
+		return false
+	}
+
+	logger.LogFail(sendStatus, LogSign, clientObj.id, "SendRequest(): Failed to send request to tracker")
+
+	return sendStatus
+}
+
+// ReceiveResponse A function to receive the response sent by the Tracker [Timeout after 30 secs]
+func (clientObj *client) ReceiveResponse() (string, bool) {
+	socket, ok := comm.Init(zmq4.REP, "")
 	defer socket.Close()
+	logger.LogFail(ok, LogSign, clientObj.id, "ReceiveResponse(): Failed to acquire response Socket")
 
-	connectionString := "tcp://" + clientObj.ip + ":" + clientObj.port
+	var connectionString = []string{comm.GetConnectionString(clientObj.ip, clientObj.port)}
+	comm.Bind(socket, connectionString)
 
-	socket.Bind(connectionString)
-	acknowledge := "ACK"
+	var response string
+	var status = false
 
-	response, _ := socket.Recv(0)
-
-	if response != "" {
-		log.Printf("[Client #%d] Successfully received response from Tracker\n", clientObj.id)
-
-		socket.Send(acknowledge, 0)
-
-		return response
+	recvChan := make(chan bool, 1)
+	go func() {
+		response, status = comm.RecvString(socket)
+		recvChan <- status
+	}()
+	select {
+	case <-recvChan:
+	case <-time.After(30 * time.Second):
+		logger.LogMsg(LogSign, clientObj.id, "Receving response from tracker timedout after 30 secs")
+		return "", false
 	}
 
-	log.Printf("[Client #%d] Failed to receive response from Tracker\n", clientObj.id)
+	logger.LogFail(status, LogSign, clientObj.id, "ReceiveResponse(): Failed to receive tracker response")
 
-	return response
+	return response, status
 }
 
-// RSendRequestToDN ..
-func (clientObj *client) RSendRequestToDN(dnIP string, dnReqPort string, serializedRequest string) {
-	socket, _ := zmq4.NewSocket(zmq4.REQ)
+// RSendRequestToDN A function to resend a request to DataNode after receiving its data from Tracker [Timeout after 30 secs]
+func (clientObj *client) RSendRequestToDN(dnIP string, dnReqPort string, serializedRequest string) bool {
+	socket, ok := comm.Init(zmq4.REQ, "")
 	defer socket.Close()
+	logger.LogFail(ok, LogSign, clientObj.id, "RSendRequestToDN(): Failed to acquire request Socket")
 
-	connectionString := "tcp://" + dnIP + ":" + dnReqPort
+	var connectionString = []string{comm.GetConnectionString(dnIP, dnReqPort)}
+	comm.Connect(socket, connectionString)
 
-	socket.Connect(connectionString)
-	acknowledge := ""
+	logger.LogMsg(LogSign, clientObj.id, "Sending Request to DataNode")
 
-	log.Printf("[Client #%d] Resending request to DataNode\n", clientObj.id)
+	var sendStatus = false
 
-	socket.Send(serializedRequest, 0)
-
-	acknowledge, _ = socket.Recv(0)
-
-	if acknowledge != "ACK" {
-		log.Printf("[Client #%d] Failed to re-send request to DataNode\n", clientObj.id)
-	} else {
-		log.Printf("[Client #%d] Successfully re-sent request to Data Node\n", clientObj.id)
-	}
-}
-
-// sendChunkCount A function to send the chunk count to the data node
-func (clientObj *client) sendChunkCount(socket *zmq4.Socket, chunksCount int) {
-	log.Printf("[Client #%d] Sending chunks count to DataNode\n", clientObj.id)
-
-	socket.Send(strconv.Itoa(chunksCount), 0)
-
-	acknowledge, _ := socket.Recv(0)
-
-	if acknowledge != "ACK" {
-		log.Printf("[Client #%d] Failed to send chunk count to DataNode\n", clientObj.id)
-		return
+	sendChan := make(chan bool, 1)
+	go func() {
+		sendStatus = comm.SendString(socket, serializedRequest)
+		sendChan <- sendStatus
+	}()
+	select {
+	case <-sendChan:
+	case <-time.After(30 * time.Second):
+		logger.LogMsg(LogSign, clientObj.id, "Sending request to DataNode timedout after 30 secs")
+		return false
 	}
 
-	log.Printf("[Client #%d] Successfully sent chunk count to Data Node\n", clientObj.id)
+	logger.LogFail(sendStatus, LogSign, clientObj.id, "RSendRequestToDN(): Failed to send request to DataNode")
+
+	return sendStatus
 }
 
-func (clientObj *client) sendDataChunk(socket *zmq4.Socket, data []byte, chunkID int) {
-	log.Printf("[Client #%d] Sending chunk to DataNode\n", clientObj.id)
+// sendChunkCount A function to send the chunk count of a file [Timeout after 30 secs]
+func (clientObj *client) sendChunkCount(socket *zmq4.Socket, chunksCount int) bool {
+	logger.LogMsg(LogSign, clientObj.id, "Sending chunk count to DataNode")
 
-	socket.SendBytes(data, 0)
+	var status = false
 
-	acknowledge, _ := socket.Recv(0)
-
-	if acknowledge != "ACK" {
-		log.Printf("[Client #%d] Failed to send chunk #%d to DataNode\n", clientObj.id, chunkID)
-		return
+	sendChan := make(chan bool, 1)
+	go func() {
+		status = comm.SendString(socket, strconv.Itoa(chunksCount))
+		sendChan <- status
+	}()
+	select {
+	case <-sendChan:
+	case <-time.After(30 * time.Second):
+		logger.LogMsg(LogSign, clientObj.id, "Sending chunk count timedout after 30 secs")
+		return false
 	}
 
-	log.Printf("[Client #%d] Successfully sent chunk #%d to Data Node\n", clientObj.id, chunkID)
+	logger.LogFail(status, LogSign, clientObj.id, "sendChunkCount(): Failed to send chunk count to DataNode")
+
+	return status
 }
 
-// SendData ..
-func (clientObj *client) SendData(req request.UploadRequest, dnIP string, dnDataPort string) {
-	socket, _ := zmq4.NewSocket(zmq4.REQ)
+// sendChunk A function to send a chunk of data [Timeout after 1 min]
+func (clientObj *client) sendDataChunk(socket *zmq4.Socket, data []byte, chunkID int) bool {
+	logger.LogMsg(LogSign, clientObj.id, fmt.Sprintf("Sending chunk #%d to DataNode", chunkID))
+
+	var status = false
+
+	sendChan := make(chan bool, 1)
+	go func() {
+		status = comm.SendBytes(socket, data)
+		sendChan <- status
+	}()
+	select {
+	case <-sendChan:
+	case <-time.After(time.Minute):
+		logger.LogMsg(LogSign, clientObj.id, "Sending chunk timedout after 1 min")
+		return false
+	}
+
+	logger.LogFail(status, LogSign, clientObj.id, "sendChunk(): Failed to send chunk to DataNode")
+
+	return status
+}
+
+// SendData A function to send data to DataNode chunk by chunk
+func (clientObj *client) SendData(req request.UploadRequest, dnIP string, dnDataPort string) bool {
+	socket, ok := comm.Init(zmq4.REQ, "")
 	defer socket.Close()
+	logger.LogFail(ok, LogSign, clientObj.id, "SendData(): Failed to acquire request Socket")
 
-	connectionString := "tcp://" + clientObj.ip + ":" + clientObj.port
-	socket.Bind(connectionString)
+	var connectionString = []string{comm.GetConnectionString(clientObj.ip, clientObj.port)}
+	comm.Bind(socket, connectionString)
 
 	file := fileutils.OpenFile(req.FileName)
 	defer file.Close()
@@ -149,7 +171,11 @@ func (clientObj *client) SendData(req request.UploadRequest, dnIP string, dnData
 	chunksCount := fileutils.GetChunksCount(req.FileName)
 
 	//Send the chunksCount to the DataNode
-	clientObj.sendChunkCount(socket, chunksCount)
+	sendChunkCountStatus := clientObj.sendChunkCount(socket, chunksCount)
+	logger.LogSuccess(sendChunkCountStatus, LogSign, clientObj.id, "Successfully sent chunk count to DataNode")
+	if sendChunkCountStatus == false {
+		return false
+	}
 
 	//Send the actual chunks of data
 	for i := 0; i < chunksCount; i++ {
@@ -159,26 +185,43 @@ func (clientObj *client) SendData(req request.UploadRequest, dnIP string, dnData
 			break
 		}
 
-		clientObj.sendDataChunk(socket, chunk[:size], i+1)
+		sendChunkStatus := clientObj.sendDataChunk(socket, chunk[:size], i+1)
+		logger.LogSuccess(sendChunkStatus, LogSign, clientObj.id, fmt.Sprintf("Successfully sent chunk #%d", i+1))
+		if sendChunkStatus == false {
+			return false
+		}
 	}
 
-	log.Printf("[Client #%d] Successfully sent data to Data Node\n", clientObj.id)
+	return true
 }
 
+// receiveChunk A function to receive a chunk of data [Timeout after 1 min]
 func (clientObj *client) receiveChunk(socket *zmq4.Socket, chunkID int) ([]byte, bool) {
-	chunk, ok := comm.RecvBytes(socket)
-	logger.LogFail(ok, "Client", clientObj.id, "receiveChunk(): Error receiving chunk")
+	var chunk []byte
+	var status = false
 
-	logger.LogSuccess(ok, "Client", clientObj.id, fmt.Sprintf("Received chunk %d", chunkID))
+	recvChan := make(chan bool, 1)
+	go func() {
+		chunk, status = comm.RecvBytes(socket)
+		recvChan <- status
+	}()
+	select {
+	case <-recvChan:
+	case <-time.After(time.Minute):
+		logger.LogMsg(LogSign, clientObj.id, "Receiving chunk from DataNode timedout after 1 min")
+		return nil, false
+	}
 
-	return chunk, ok
+	logger.LogFail(status, LogSign, clientObj.id, fmt.Sprintf("receiveChunk(): Error receiving chunk #%d", chunkID))
+
+	return chunk, status
 }
 
-// RecvPieces ..
-func (clientObj *client) RecvPieces(req request.UploadRequest, start string, chunkCount int, done chan bool) {
+// RecvPieces A function to receive file pieces from DataNode
+func (clientObj *client) RecvPieces(req request.UploadRequest, start string, chunkCount int, done chan bool) bool {
 	socket, ok := comm.Init(zmq4.REP, "")
 	defer socket.Close()
-	logger.LogFail(ok, "Client", clientObj.id, "RecvPieces(): Failed to acquire response Socket")
+	logger.LogFail(ok, LogSign, clientObj.id, "RecvPieces(): Failed to acquire response Socket")
 
 	var connectionString = []string{comm.GetConnectionString(clientObj.ip, req.ClientPort)}
 	comm.Bind(socket, connectionString)
@@ -188,44 +231,51 @@ func (clientObj *client) RecvPieces(req request.UploadRequest, start string, chu
 
 	for i := 0; i < chunkCount; i++ {
 		chunk, chunkStatus := clientObj.receiveChunk(socket, i+1)
-
+		logger.LogSuccess(chunkStatus, LogSign, clientObj.id, fmt.Sprintf("Successfully received chunk #%d", i+1))
 		if chunkStatus == false {
-			logger.LogMsg("Client", clientObj.id, "RecvPieces(): Abort!")
-			return
+			done <- true
+			return false
 		}
-
+		//TODO: Clean up
 		fileutils.WriteChunk(file, chunk)
 	}
 
-	logger.LogMsg("Client", clientObj.id, "Piece"+"#"+start+"received")
+	logger.LogMsg(LogSign, clientObj.id, fmt.Sprintf("Received Block #%s", start))
+
 	done <- true
+	return true
 }
 
 // ReceiveResponse A function to receive the response sent by the Tracker
-func (clientObj *client) ReceiveNotification() string {
-	socket, _ := zmq4.NewSocket(zmq4.REP)
+func (clientObj *client) ReceiveNotification() (string, bool) {
+	socket, ok := comm.Init(zmq4.REP, "")
 	defer socket.Close()
+	logger.LogFail(ok, LogSign, clientObj.id, "ReceiveNotification(): Failed to acquire response Socket")
 
-	connectionString := "tcp://" + clientObj.ip + ":" + clientObj.notifyPort
+	var connectionString = []string{comm.GetConnectionString(clientObj.ip, clientObj.notifyPort)}
+	comm.Bind(socket, connectionString)
 
-	socket.Bind(connectionString)
-	acknowledge := "ACK"
+	var response string
+	var sendStatus bool
 
-	response, _ := socket.Recv(0)
-
-	if response != "" {
-		log.Printf("[Client #%d] Successfully received response from Tracker\n", clientObj.id)
-
-		socket.Send(acknowledge, 0)
-
-		return response
+	recieveNotificationChan := make(chan bool, 1)
+	go func() {
+		response, sendStatus = comm.RecvString(socket)
+		recieveNotificationChan <- sendStatus
+	}()
+	select {
+	case <-recieveNotificationChan:
+	case <-time.After(30 * time.Second):
+		logger.LogMsg(LogSign, clientObj.id, "ReceiveNotification(): Connection timed out after 30 secs")
+		return "", false
 	}
 
-	log.Printf("[Client #%d] Failed to receive response from Tracker\n", clientObj.id)
+	logger.LogFail(sendStatus, LogSign, clientObj.id, "ReceiveNotification(): Failed to receive notification from tracker")
 
-	return response
+	return response, sendStatus
 }
 
+// CloseConnection A function to shut down the request port socket
 func (clientObj *client) CloseConnection() {
 	clientObj.socket.Close()
 }

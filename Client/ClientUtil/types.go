@@ -2,6 +2,9 @@ package client
 
 import "github.com/pebbe/zmq4"
 
+// LogSign Used for logging client messages
+const LogSign string = "Client"
+
 // client A struct to represent the client structure
 type client struct {
 	id           int

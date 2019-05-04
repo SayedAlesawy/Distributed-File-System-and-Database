@@ -4,9 +4,9 @@ import (
 	client "Distributed-Video-Processing-Cluster/Client/ClientUtil"
 	constants "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Constants"
 	fileutils "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/File"
+	logger "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Log"
 	request "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Request"
 	"fmt"
-	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -26,7 +26,7 @@ func main() {
 	clientObj := client.NewClient(clientID, clientIP, clientPort+"0", clientNotifyPort, trackerIP, trackerPorts)
 	clientObj.EstablishConnection()
 
-	log.Println("[Client]", "Successfully launched")
+	logger.LogMsg(client.LogSign, clientID, "Successfully launched")
 
 	//Request data
 	requestID := 1
@@ -35,21 +35,26 @@ func main() {
 	work := 1
 
 	for {
-		log.Println("[Client]", "Press 0 to quit, 1 to continue")
+		logger.LogMsg(client.LogSign, clientID, "Press 0 to quit, 1 to continue")
 		fmt.Scanf("%d", &work)
 
 		if work == 0 {
 			break
 		}
 
-		log.Println("[Client]", "Request type = ")
+		logger.LogMsg(client.LogSign, clientID, "Request type = ")
 		fmt.Scanf("%s", &requestType)
 
-		log.Println("Client", "File name = ")
+		logger.LogMsg(client.LogSign, clientID, "File name = ")
 		fmt.Scanf("%s", &fileName)
-		//TODO handle file not found before sending requests to datanode and maybe before sending
-		//to tracker 7ata
+
 		if requestType == "up" {
+			exists := fileutils.IsThere(fileName)
+			if exists == false {
+				logger.LogMsg(client.LogSign, clientID, fmt.Sprintf("%s :no such file or directory", fileName))
+				continue
+			}
+
 			requestObj := request.UploadRequest{
 				ID:         requestID,
 				Type:       request.Upload,
@@ -61,20 +66,42 @@ func main() {
 
 			serializeRequest := request.SerializeUpload(requestObj)
 
-			clientObj.SendRequest(serializeRequest)
-			response := clientObj.ReceiveResponse()
+			sendRequestStatus := clientObj.SendRequest(serializeRequest)
+			logger.LogSuccess(sendRequestStatus, client.LogSign, clientID, "Successfully sent request to tracker")
+			if sendRequestStatus == false {
+				continue
+			}
 
-			log.Println("[Client #]", clientID, "Received this:", response)
+			response, receiveResponseStatus := clientObj.ReceiveResponse()
+			logger.LogSuccess(receiveResponseStatus, client.LogSign, clientID, fmt.Sprintf("Tracker response: %s", response))
+			if receiveResponseStatus == false {
+				continue
+			}
+
+			if response == "All data nodes are offline" {
+				continue
+			}
 
 			arr := strings.Fields(response)
 
-			clientObj.RSendRequestToDN(arr[0], arr[1], serializeRequest)
+			rsendRequestStatus := clientObj.RSendRequestToDN(arr[0], arr[1], serializeRequest)
+			logger.LogSuccess(rsendRequestStatus, client.LogSign, clientID, "Successfully sent request to DataNode")
+			if rsendRequestStatus == false {
+				continue
+			}
 
-			clientObj.SendData(requestObj, arr[0], arr[1])
+			sendDataStatus := clientObj.SendData(requestObj, arr[0], arr[1])
+			logger.LogSuccess(sendDataStatus, client.LogSign, clientID, "Successfully sent file to DataNode")
+			if sendDataStatus == false {
+				continue
+			}
 
-			notification := clientObj.ReceiveNotification()
+			notification, notificationStatus := clientObj.ReceiveNotification()
+			logger.LogSuccess(notificationStatus, client.LogSign, clientID, fmt.Sprintf("Tracker confirmation: %s", notification))
+			if notificationStatus == false {
+				continue
+			}
 
-			log.Println("[Client #]", clientID, "Received notification:", notification)
 		} else if requestType == "dwn" {
 			requestObj := request.UploadRequest{
 				ID:         requestID,
@@ -86,9 +113,18 @@ func main() {
 			}
 
 			serializeRequest := request.SerializeUpload(requestObj)
-			clientObj.SendRequest(serializeRequest)
-			response := clientObj.ReceiveResponse()
-			log.Println("[Client #]", clientID, "Received this:", response)
+
+			sendRequestStatus := clientObj.SendRequest(serializeRequest)
+			logger.LogSuccess(sendRequestStatus, client.LogSign, clientID, "Successfully sent request to tracker")
+			if sendRequestStatus == false {
+				continue
+			}
+
+			response, receiveResponseStatus := clientObj.ReceiveResponse()
+			logger.LogSuccess(receiveResponseStatus, client.LogSign, clientID, fmt.Sprintf("Tracker response: %s", response))
+			if receiveResponseStatus == false {
+				continue
+			}
 
 			if response == "404: File not found" {
 				continue
@@ -119,7 +155,12 @@ func main() {
 				req := serializeRequest + " " + strconv.Itoa(start) + " " + strconv.Itoa(chunkEach)
 
 				start += chunkEach
-				clientObj.RSendRequestToDN(arr[i], arr[i+1]+"1", req)
+
+				rsendRequestStatus := clientObj.RSendRequestToDN(arr[i], arr[i+1]+"1", req)
+				logger.LogSuccess(rsendRequestStatus, client.LogSign, clientID, "Successfully sent request to DataNode")
+				if rsendRequestStatus == false {
+					continue
+				}
 
 				go clientObj.RecvPieces(requestObj, strconv.Itoa(blockID), chunkEach, done)
 
@@ -128,7 +169,7 @@ func main() {
 			}
 
 			for i := 0; i < dataNodeCount; i++ {
-				log.Println("[Client #]", clientID, "Thread", <-done)
+				logger.LogMsg(client.LogSign, clientID, fmt.Sprintf("Thread #%d finished %t", i+1, <-done))
 			}
 
 			fileutils.AssembleFile(requestObj.FileName, requestObj.FileName[:len(requestObj.FileName)-4], requestObj.FileName[len(requestObj.FileName)-4:], dataNodeCount)
