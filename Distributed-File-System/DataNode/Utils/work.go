@@ -74,7 +74,7 @@ func (datanodeObj *dataNode) uploadRequestHandler(req request.UploadRequest) {
 
 func (datanodeObj *dataNode) downloadRequestHandler(req request.UploadRequest, start int, chunksCount int) {
 	logger.LogMsg(LogSignDN, datanodeObj.id, "Download Request Handler Started")
-	datanodeObj.sendPieces(req, start, chunksCount)
+	datanodeObj.sendPieces(req, start, chunksCount, req.ClientID)
 }
 
 func (datanodeObj *dataNode) replicationRequestHandler(req request.ReplicationRequest) {

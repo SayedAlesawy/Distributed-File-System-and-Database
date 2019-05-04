@@ -190,7 +190,7 @@ func (datanodeObj *dataNode) sendData(fileName string, targetID int, targetIP st
 }
 
 // sendPieces A function to send a group of pieces to clients
-func (datanodeObj *dataNode) sendPieces(req request.UploadRequest, start int, chunksCount int) {
+func (datanodeObj *dataNode) sendPieces(req request.UploadRequest, start int, chunksCount int, clientID int) {
 	socket, ok := comm.Init(zmq4.REQ, "")
 	defer socket.Close()
 	logger.LogFail(ok, LogSignDN, datanodeObj.id, "sendPieces(): Failed to acquire request Socket")
@@ -198,7 +198,10 @@ func (datanodeObj *dataNode) sendPieces(req request.UploadRequest, start int, ch
 	var connectionString = []string{comm.GetConnectionString(req.ClientIP, req.ClientPort)}
 	comm.Connect(socket, connectionString)
 
-	file := fileutils.OpenSeekFile(req.FileName, start)
+	directory := "Client" + strconv.Itoa(clientID)
+	path := filepath.Join(directory, req.FileName)
+
+	file := fileutils.OpenSeekFile(path, start)
 	defer file.Close()
 
 	for i := 0; i < chunksCount; i++ {

@@ -93,24 +93,69 @@ func (trackerNodeObj *trackerNode) uploadRequestHandler(req request.UploadReques
 	trackerNodeObj.sendDataNodePortsToClient(req, dataNodeConnectionString)
 }
 
+// checkFileExistance Function to check whether a metafile entry exsists
+func (trackerNodeObj *trackerNode) checkFileExistance(fileName string, clientID int) (fileRow, bool) {
+	trackerNodeObj.dbMutex.Lock()
+	metafile, exists := selectMetaFile(trackerNodeObj.db, fileName, clientID)
+	trackerNodeObj.dbMutex.Unlock()
+
+	return metafile, exists
+}
+
+// getDownloadSrcs A function to obtain all possible download sources
+func (trackerNodeObj *trackerNode) getDownloadSrcs(location string) (string, bool) {
+	locations := strings.Fields(location)
+
+	downloadLocations := ""
+	atleast := false
+
+	for i := 0; i < len(locations); i++ {
+		dnID, _ := strconv.Atoi(locations[i])
+
+		trackerNodeObj.dbMutex.Lock()
+		src, srcAlive := selectDataNode(trackerNodeObj.db, dnID)
+		trackerNodeObj.dbMutex.Unlock()
+
+		if srcAlive == false {
+			continue
+		}
+
+		downloadLocations += src.ip + " " + src.basePort + "1" + " "
+		downloadLocations += src.ip + " " + src.basePort + "2" + " "
+		atleast = true
+	}
+
+	return downloadLocations, atleast
+}
+
+// downloadRequestHandler A function handle requests of type download
 func (trackerNodeObj *trackerNode) downloadRequestHandler(req request.UploadRequest) {
-	//Should do DB logic here
 	logMsg := fmt.Sprintf("Handling download request #%d, from client #%d", req.ID, req.ClientID)
 	logger.LogMsg(LogSignTR, trackerNodeObj.id, logMsg)
 
-	chunksCount := "2887" //hardcoded for now, should be fetched from the DB
+	//Check if the file to download exists and where
+	metafile, exists := trackerNodeObj.checkFileExistance(req.FileName, req.ClientID)
+	response := ""
+	if exists == false { //If the file doesn't exist, send a 404
+		response = "404: File not found"
+		trackerNodeObj.sendDataNodePortsToClient(req, response)
+		return
+	}
 
-	downloadPorts := chunksCount + " " +
-		constants.DownloadIP1 + " " + constants.DownloadPort1 + " " +
-		constants.DownloadIP2 + " " + constants.DownloadPort2 + " " +
-		constants.DownloadIP3 + " " + constants.DownloadPort3 + " " +
-		constants.DownloadIP4 + " " + constants.DownloadPort4 + " " +
-		constants.DownloadIP5 + " " + constants.DownloadPort5 + " " +
-		constants.DownloadIP6 + " " + constants.DownloadPort6
+	//If the file exists, get all possible download srcs
+	downloadSrcs, atleast := trackerNodeObj.getDownloadSrcs(metafile.location)
+	if atleast == false {
+		response = "All source datanodes are offline, try again later"
+		trackerNodeObj.sendDataNodePortsToClient(req, response)
+		return
+	}
 
-	trackerNodeObj.sendDataNodePortsToClient(req, downloadPorts)
+	response = strconv.Itoa(metafile.fileSize) + " " + downloadSrcs
+
+	trackerNodeObj.sendDataNodePortsToClient(req, response)
 }
 
+// getReplicationSrc A function to obtain the replication source out of all source nodes
 func (trackerNodeObj *trackerNode) getReplicationSrc(locations []int) (dataNodeRow, bool) {
 	for i := 0; i < len(locations); i++ {
 		trackerNodeObj.dbMutex.Lock()
@@ -125,6 +170,7 @@ func (trackerNodeObj *trackerNode) getReplicationSrc(locations []int) (dataNodeR
 	return dataNodeRow{}, false
 }
 
+// replicateFile A function to replicate a file to all avaiable datanodes to at most 3
 func (trackerNodeObj *trackerNode) replicateFile(metafile fileRow) {
 	fields := strings.Fields(metafile.location)
 

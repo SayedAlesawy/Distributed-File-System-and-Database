@@ -90,6 +90,14 @@ func main() {
 			response := clientObj.ReceiveResponse()
 			log.Println("[Client #]", clientID, "Received this:", response)
 
+			if response == "404: File not found" {
+				continue
+			}
+
+			if response == "All source datanodes are offline, try again later" {
+				continue
+			}
+
 			arr := strings.Fields(response)
 			chunkCount, _ := strconv.Atoi(arr[0])
 			dataNodeCount := (len(arr) - 1) / 2
