@@ -240,13 +240,13 @@ func (trackerNodeObj *trackerNode) replicateFile(metafile fileRow) {
 
 		if success == true {
 			newLocation += " " + strconv.Itoa(dst.id)
+
+			//Update the metafile entry
+			trackerNodeObj.dbMutex.Lock()
+			updateMetaFile(trackerNodeObj.db, newLocation, metafile.fileName, metafile.clientID)
+			trackerNodeObj.dbMutex.Unlock()
 		}
 	}
-
-	//Update the metafile entry
-	trackerNodeObj.dbMutex.Lock()
-	updateMetaFile(trackerNodeObj.db, newLocation, metafile.fileName, metafile.clientID)
-	trackerNodeObj.dbMutex.Unlock()
 }
 
 // Replicate A function that implements the periodic Replication routine
