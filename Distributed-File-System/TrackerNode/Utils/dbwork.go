@@ -170,6 +170,46 @@ func selectMetaFile(db *sql.DB, fileName string, clientID int) (fileRow, bool) {
 	return res, true
 }
 
+// selectMetaFileForClient A function to select a metafile entry for a certain client
+func selectMetaFileForClient(db *sql.DB, clientID int) []fileRow {
+	sqlStatement := sqlSelectAllMetaFilesForClient
+
+	logMsgs := logger.LogInfo{
+		Success: fmt.Sprintf("File list for client #%d selected Successfully", clientID),
+		Error:   fmt.Sprintf("File list  for client #%d selection failed", clientID),
+	}
+
+	rows, ok := dbwrapper.ExecuteRowsQuery(db, sqlStatement, logMsgs, false, clientID)
+	defer rows.Close()
+
+	var fileList []fileRow
+	for rows.Next() {
+		var fileName string
+		var fileSize int
+
+		err := rows.Scan(&fileName, &fileSize)
+		logger.LogDBErr(err, dbwrapper.LogSign, "selectMetaFiles(): Error while extracting results", false)
+
+		res := fileRow{
+			fileName: fileName,
+			clientID: clientID,
+			fileSize: fileSize,
+			location: "",
+		}
+
+		fileList = append(fileList, res)
+	}
+
+	err := rows.Err()
+	logger.LogDBErr(err, dbwrapper.LogSign, "selectMetaFileForClient(): Error while extracting results", false)
+
+	if ok == false {
+		fileList = []fileRow{}
+	}
+
+	return fileList
+}
+
 // UpdatePeerDownload A function to update the peer-download status
 func updateMetaFile(db *sql.DB, location string, fileName string, clientID int) bool {
 	sqlStatement := sqlUpdateMetaFile

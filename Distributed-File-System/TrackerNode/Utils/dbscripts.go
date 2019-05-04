@@ -66,3 +66,10 @@ const sqlUpdateMetaFile string = `
 	SET location = $1
 	WHERE fileName = $2 AND clientID = $3; 
 `
+
+// sqlSelectAllMetaFilesForClient SQL to select all metafiles for a client
+const sqlSelectAllMetaFilesForClient string = `
+	SELECT fileName, fileSize 
+	FROM metafiles 
+	WHERE clientID = $1
+`

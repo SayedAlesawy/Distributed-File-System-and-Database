@@ -49,8 +49,11 @@ func (trackerNodeObj *trackerNode) handleRequest(serializedRequest string) {
 
 	} else if reqType == request.Completion {
 		req := request.DeserializeCompletion(serializedRequest)
-
 		trackerNodeObj.completionRequestHandler(req)
+
+	} else if reqType == request.Display {
+		req := request.DeserializeUpload(serializedRequest)
+		trackerNodeObj.displayRequestHandler(req)
 
 	} else if reqType == request.Invalid {
 		logger.LogMsg(LogSignTR, trackerNodeObj.id, "Invalid Request")
@@ -281,4 +284,28 @@ func (trackerNodeObj *trackerNode) completionRequestHandler(req request.Completi
 
 	msg := fmt.Sprintf("Successfully uploaded file %s of size %d", req.FileName, req.FileSize)
 	trackerNodeObj.notifyClient(req.ClientIP, req.ClientPort[:3]+"7", msg, req.ClientID)
+}
+
+// displayRequestHandler A function to handle the display request
+func (trackerNodeObj *trackerNode) displayRequestHandler(req request.UploadRequest) {
+	var fileList []fileRow
+
+	trackerNodeObj.dbMutex.Lock()
+	fileList = selectMetaFileForClient(trackerNodeObj.db, req.ClientID)
+	trackerNodeObj.dbMutex.Unlock()
+
+	if len(fileList) == 0 {
+		response := "No Files"
+		trackerNodeObj.sendDataNodePortsToClient(req, response)
+
+		return
+	}
+
+	response := ""
+	for i := 0; i < len(fileList); i++ {
+		response += fileList[i].fileName + " " + strconv.Itoa(fileList[i].fileSize) + " "
+	}
+
+	fmt.Println("response = ", response)
+	trackerNodeObj.sendDataNodePortsToClient(req, response)
 }

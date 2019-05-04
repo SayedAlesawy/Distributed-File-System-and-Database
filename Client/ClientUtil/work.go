@@ -144,11 +144,9 @@ func (clientObj *client) DisplayHandler(req request.UploadRequest) {
 
 	clientFiles := strings.Fields(response)
 
-	logger.LogMsg(LogSign, clientObj.id, "Your files")
-	fmt.Println("File Name          |           Size")
+	logger.LogMsg(LogSign, clientObj.id, "Your files:")
 
 	for i := 0; i < len(clientFiles); i += 2 {
-		logger.LogMsg(LogSign, clientObj.id, "Your files")
-		fmt.Printf("  %s               |            %s\n", clientFiles[i], clientFiles[i+1])
+		fmt.Printf("%s    %s MB\n", clientFiles[i], clientFiles[i+1])
 	}
 }

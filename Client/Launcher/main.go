@@ -43,10 +43,10 @@ func main() {
 		logger.LogMsg(client.LogSign, clientID, "Request type = ")
 		fmt.Scanf("%s", &requestType)
 
-		logger.LogMsg(client.LogSign, clientID, "File name = ")
-		fmt.Scanf("%s", &fileName)
-
 		if requestType == "up" {
+			logger.LogMsg(client.LogSign, clientID, "File name = ")
+			fmt.Scanf("%s", &fileName)
+
 			requestObj := request.UploadRequest{
 				ID:         requestID,
 				Type:       request.Upload,
@@ -59,6 +59,9 @@ func main() {
 			clientObj.UploadHandler(requestObj)
 
 		} else if requestType == "dwn" {
+			logger.LogMsg(client.LogSign, clientID, "File name = ")
+			fmt.Scanf("%s", &fileName)
+
 			requestObj := request.UploadRequest{
 				ID:         requestID,
 				Type:       request.Download,
@@ -77,7 +80,7 @@ func main() {
 				ClientID:   clientID,
 				ClientIP:   clientIP,
 				ClientPort: clientPort + "0",
-				FileName:   "",
+				FileName:   "dummy",
 			}
 
 			clientObj.DisplayHandler(requestObj)
