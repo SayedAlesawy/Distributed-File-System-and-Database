@@ -121,3 +121,34 @@ func (clientObj *client) DownloadHandler(reqObj request.UploadRequest) {
 
 	fileutils.AssembleFile(reqObj.FileName, reqObj.FileName[:len(reqObj.FileName)-4], reqObj.FileName[len(reqObj.FileName)-4:], dataNodeCount)
 }
+
+// DisplayHandler A function to handle the display request
+func (clientObj *client) DisplayHandler(req request.UploadRequest) {
+	serializeRequest := request.SerializeUpload(req)
+
+	sendRequestStatus := clientObj.SendRequest(serializeRequest)
+	logger.LogSuccess(sendRequestStatus, LogSign, clientObj.id, "Successfully sent request to tracker")
+	if sendRequestStatus == false {
+		return
+	}
+
+	response, receiveResponseStatus := clientObj.ReceiveResponse()
+	if receiveResponseStatus == false {
+		return
+	}
+
+	if response == "No Files" {
+		logger.LogMsg(LogSign, clientObj.id, "You have no files")
+		return
+	}
+
+	clientFiles := strings.Fields(response)
+
+	logger.LogMsg(LogSign, clientObj.id, "Your files")
+	fmt.Println("File Name          |           Size")
+
+	for i := 0; i < len(clientFiles); i += 2 {
+		logger.LogMsg(LogSign, clientObj.id, "Your files")
+		fmt.Printf("  %s               |            %s\n", clientFiles[i], clientFiles[i+1])
+	}
+}

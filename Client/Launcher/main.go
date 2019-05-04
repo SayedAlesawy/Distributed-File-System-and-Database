@@ -69,6 +69,18 @@ func main() {
 			}
 
 			clientObj.DownloadHandler(requestObj)
+
+		} else if requestType == "ls" {
+			requestObj := request.UploadRequest{
+				ID:         requestID,
+				Type:       request.Display,
+				ClientID:   clientID,
+				ClientIP:   clientIP,
+				ClientPort: clientPort + "0",
+				FileName:   "",
+			}
+
+			clientObj.DisplayHandler(requestObj)
 		}
 
 		requestID++
