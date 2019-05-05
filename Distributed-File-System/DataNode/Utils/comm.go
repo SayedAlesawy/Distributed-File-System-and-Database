@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	"github.com/pebbe/zmq4"
 )
@@ -43,7 +44,7 @@ func (dataNodeLauncherObj dataNodeLauncher) SendHandshake(handshake string) {
 	logger.LogMsg(LogSignL, dataNodeLauncherObj.id, "Successfully connected to Tracker")
 }
 
-// sendReplicationRequest A function to send replication request to target machine
+// sendReplicationRequest A function to send replication request to target machine [Timeout after 30 secs]
 func (datanodeObj *dataNode) sendReplicationRequest(req request.ReplicationRequest) bool {
 	socket, ok := comm.Init(zmq4.REQ, "")
 	defer socket.Close()
@@ -52,7 +53,20 @@ func (datanodeObj *dataNode) sendReplicationRequest(req request.ReplicationReque
 	var connectionString = []string{comm.GetConnectionString(req.TargetNodeIP, req.TargetNodeBasePort+"21")}
 	comm.Connect(socket, connectionString)
 
-	status := comm.SendString(socket, request.SerializeReplication(req))
+	var status = false
+
+	sendChan := make(chan bool, 1)
+	go func() {
+		status = comm.SendString(socket, request.SerializeReplication(req))
+		sendChan <- status
+	}()
+	select {
+	case <-sendChan:
+	case <-time.After(30 * time.Second):
+		logger.LogMsg(LogSignDN, datanodeObj.id, "Sending replication request timedout after 30 secs")
+		return false
+	}
+
 	logger.LogFail(status, LogSignDN, datanodeObj.id, "sendReplicationRequest(): Failed to send RPQ to target")
 	logger.LogSuccess(status, LogSignDN, datanodeObj.id, "Successfully sent RPQ to target")
 
@@ -61,7 +75,21 @@ func (datanodeObj *dataNode) sendReplicationRequest(req request.ReplicationReque
 
 // receiveChunkCount A function to recieve the chunk count of a file
 func (datanodeObj *dataNode) receiveChunkCount(socket *zmq4.Socket) (int, bool) {
-	chunkCount, ok := comm.RecvString(socket)
+	var chunkCount string
+	var ok = false
+
+	recvChan := make(chan bool, 1)
+	go func() {
+		chunkCount, ok = comm.RecvString(socket)
+		recvChan <- ok
+	}()
+	select {
+	case <-recvChan:
+	case <-time.After(30 * time.Second):
+		logger.LogMsg(LogSignDN, datanodeObj.id, "Receiving chunk count timedout after 30 secs")
+		return 0, false
+	}
+
 	logger.LogFail(ok, LogSignDN, datanodeObj.id, "receiveChunkCount(): Error receiving chunk count")
 
 	ret, convErr := strconv.Atoi(chunkCount)
@@ -76,7 +104,20 @@ func (datanodeObj *dataNode) receiveChunkCount(socket *zmq4.Socket) (int, bool) 
 func (datanodeObj *dataNode) sendChunkCount(socket *zmq4.Socket, chunksCount int) bool {
 	logger.LogMsg(LogSignDN, datanodeObj.id, "Sending chunk count to target")
 
-	status := comm.SendString(socket, strconv.Itoa(chunksCount))
+	var status = false
+
+	sendChan := make(chan bool, 1)
+	go func() {
+		status = comm.SendString(socket, strconv.Itoa(chunksCount))
+		sendChan <- status
+	}()
+	select {
+	case <-sendChan:
+	case <-time.After(30 * time.Second):
+		logger.LogMsg(LogSignDN, datanodeObj.id, "Sending RPQ chunk count timedout after 30 secs")
+		return false
+	}
+
 	logger.LogFail(status, LogSignDN, datanodeObj.id, "sendChunkCount(): Failed to RPQ send chunk count to target")
 	logger.LogSuccess(status, LogSignDN, datanodeObj.id, "Successfully sent RPQ chunk count to target")
 
@@ -85,7 +126,21 @@ func (datanodeObj *dataNode) sendChunkCount(socket *zmq4.Socket, chunksCount int
 
 // receiveChunk A function to recieve a chunk of data
 func (datanodeObj *dataNode) receiveChunk(socket *zmq4.Socket, chunkID int) ([]byte, bool) {
-	chunk, ok := comm.RecvBytes(socket)
+	var chunk []byte
+	var ok = false
+
+	recvChan := make(chan bool, 1)
+	go func() {
+		chunk, ok = comm.RecvBytes(socket)
+		recvChan <- ok
+	}()
+	select {
+	case <-recvChan:
+	case <-time.After(time.Minute):
+		logger.LogMsg(LogSignDN, datanodeObj.id, "Receiving data chunk timedout after 1 min")
+		return []byte{}, false
+	}
+
 	logger.LogFail(ok, LogSignDN, datanodeObj.id, "receiveChunk(): Error receiving chunk")
 
 	logger.LogSuccess(ok, LogSignDN, datanodeObj.id, fmt.Sprintf("Received chunk %d", chunkID))
@@ -97,7 +152,20 @@ func (datanodeObj *dataNode) receiveChunk(socket *zmq4.Socket, chunkID int) ([]b
 func (datanodeObj *dataNode) sendDataChunk(socket *zmq4.Socket, data []byte, chunkID int) bool {
 	logger.LogMsg(LogSignDN, datanodeObj.id, fmt.Sprintf("Sending chunk #%d to target", chunkID))
 
-	status := comm.SendBytes(socket, data)
+	var status = false
+
+	sendChan := make(chan bool, 1)
+	go func() {
+		status = comm.SendBytes(socket, data)
+		sendChan <- status
+	}()
+	select {
+	case <-sendChan:
+	case <-time.After(time.Minute):
+		logger.LogMsg(LogSignDN, datanodeObj.id, "Sending data chunk timedout after 1 min")
+		return false
+	}
+
 	logger.LogFail(status, LogSignDN, datanodeObj.id, "sendChunk(): Failed to send chunk to target")
 	logger.LogSuccess(status, LogSignDN, datanodeObj.id, fmt.Sprintf("Successfully sent chunk #%d to target", chunkID))
 
@@ -126,7 +194,7 @@ func (datanodeObj *dataNode) receiveData(fileName string, ip string, port string
 	chunkCount, chunkCountStatus := datanodeObj.receiveChunkCount(socket)
 
 	if chunkCountStatus == false {
-		logger.LogMsg(LogSignDN, datanodeObj.id, "receiveDataFromClient(): Abort!")
+		logger.LogMsg(LogSignDN, datanodeObj.id, "receiveDataFromClient(): chunkCount Abort!")
 		return 0
 	}
 
@@ -134,7 +202,7 @@ func (datanodeObj *dataNode) receiveData(fileName string, ip string, port string
 		chunk, chunkStatus := datanodeObj.receiveChunk(socket, i+1)
 
 		if chunkStatus == false {
-			logger.LogMsg(LogSignDN, datanodeObj.id, "receiveDataFromClient(): Abort!")
+			logger.LogMsg(LogSignDN, datanodeObj.id, "receiveDataFromClient(): Data chunk Abort!")
 			return 0
 		}
 
@@ -147,7 +215,7 @@ func (datanodeObj *dataNode) receiveData(fileName string, ip string, port string
 }
 
 // sendData A function to send Data to the target machine
-func (datanodeObj *dataNode) sendData(fileName string, targetID int, targetIP string, targetPort string, clientID int) {
+func (datanodeObj *dataNode) sendData(fileName string, targetID int, targetIP string, targetPort string, clientID int) bool {
 	socket, ok := comm.Init(zmq4.REQ, "")
 	defer socket.Close()
 	logger.LogFail(ok, LogSignDN, datanodeObj.id, "sendData(): Failed to acquire request Socket")
@@ -167,7 +235,7 @@ func (datanodeObj *dataNode) sendData(fileName string, targetID int, targetIP st
 
 	if chunkCountStatus == false {
 		logger.LogMsg(LogSignDN, datanodeObj.id, "sendData(): Abort!")
-		return
+		return false
 	}
 
 	//Send the actual chunks of data
@@ -182,15 +250,16 @@ func (datanodeObj *dataNode) sendData(fileName string, targetID int, targetIP st
 
 		if chunkStatus == false {
 			logger.LogMsg(LogSignDN, datanodeObj.id, "sendData(): Abort!")
-			return
+			return false
 		}
 	}
 
 	logger.LogMsg(LogSignDN, datanodeObj.id, fmt.Sprintf("Successfully replicated file to data node #%d", targetID))
+	return true
 }
 
 // sendPieces A function to send a group of pieces to clients
-func (datanodeObj *dataNode) sendPieces(req request.UploadRequest, start int, chunksCount int, clientID int) {
+func (datanodeObj *dataNode) sendPieces(req request.UploadRequest, start int, chunksCount int, clientID int) bool {
 	socket, ok := comm.Init(zmq4.REQ, "")
 	defer socket.Close()
 	logger.LogFail(ok, LogSignDN, datanodeObj.id, "sendPieces(): Failed to acquire request Socket")
@@ -215,11 +284,12 @@ func (datanodeObj *dataNode) sendPieces(req request.UploadRequest, start int, ch
 
 		if chunkStatus == false {
 			logger.LogMsg(LogSignDN, datanodeObj.id, "sendPieces(): Abort!")
-			return
+			return false
 		}
 	}
 
 	logger.LogMsg(LogSignDN, datanodeObj.id, fmt.Sprintf("Successfully sent pieces to client #%d", req.ClientID))
+	return true
 }
 
 // sendCompletionNotifcation A function to notify the tracker of an action completion
@@ -231,7 +301,20 @@ func (datanodeObj *dataNode) sendCompletionNotifcation(req request.CompletionReq
 	var connectionString = []string{comm.GetConnectionString(datanodeObj.trackerIP, datanodeObj.trackerPorts[1])}
 	comm.Connect(socket, connectionString)
 
-	status := comm.SendString(socket, request.SerializeCompletion(req))
+	var status = false
+
+	sendChan := make(chan bool, 1)
+	go func() {
+		status = comm.SendString(socket, request.SerializeCompletion(req))
+		sendChan <- status
+	}()
+	select {
+	case <-sendChan:
+	case <-time.After(30 * time.Second):
+		logger.LogMsg(LogSignDN, datanodeObj.id, "Sending Completion Notifcation timedout after 30 secs")
+		return false
+	}
+
 	logger.LogFail(status, LogSignDN, datanodeObj.id, "sendCompletionNotifcation(): Failed to notify tracker of completion")
 	logger.LogSuccess(status, LogSignDN, datanodeObj.id, "Successfully notified tracker of completion")
 
@@ -239,7 +322,7 @@ func (datanodeObj *dataNode) sendCompletionNotifcation(req request.CompletionReq
 }
 
 // notifyReplicationCompletion A function to notify tracker of replication completion
-func (datanodeObj *dataNode) notifyReplicationCompletion(port string) bool {
+func (datanodeObj *dataNode) notifyReplicationCompletion(port string, msg string) bool {
 	socket, ok := comm.Init(zmq4.REQ, "")
 	defer socket.Close()
 	logger.LogFail(ok, LogSignDN, datanodeObj.id, "notifyReplicationCompletion(): Failed to acquire request Socket")
@@ -247,7 +330,20 @@ func (datanodeObj *dataNode) notifyReplicationCompletion(port string) bool {
 	var connectionString = []string{comm.GetConnectionString(datanodeObj.trackerIP, port)}
 	comm.Connect(socket, connectionString)
 
-	status := comm.SendString(socket, "Replication Finished")
+	var status = false
+
+	sendChan := make(chan bool, 1)
+	go func() {
+		status = comm.SendString(socket, msg)
+		sendChan <- status
+	}()
+	select {
+	case <-sendChan:
+	case <-time.After(30 * time.Second):
+		logger.LogMsg(LogSignDN, datanodeObj.id, "Sending Replication completion notifcation timedout after 30 secs")
+		return false
+	}
+
 	logger.LogFail(status, LogSignDN, datanodeObj.id, "notifyReplicationCompletion(): Failed to notify tracker of completion")
 	logger.LogSuccess(status, LogSignDN, datanodeObj.id, "Successfully notified tracker of replication completion")
 

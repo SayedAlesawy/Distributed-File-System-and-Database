@@ -47,8 +47,8 @@ func main() {
 	db := dbwrapper.ConnectDB()
 	defer db.Close()
 
-	dbwrapper.CleanUP(db, trackernode.SQLDropDataNodesTable+trackernode.SQLDropMetaFileTable)
-	dbwrapper.Migrate(db, trackernode.SQLCreateDataNodesTable+trackernode.SQLCreateMetaFile)
+	dbwrapper.CleanUP(db, trackernode.SQLDropDataNodesTable)
+	dbwrapper.Migrate(db, trackernode.SQLCreateDataNodesTable)
 
 	var portsMutex sync.Mutex
 	var ipMutex sync.Mutex
