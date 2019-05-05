@@ -54,20 +54,21 @@ func commandDataDeseralizer(s string) (string, string, string) {
 	}
 	return fields[0], fields[1], fields[2]
 }
-func registerUser(name string, email string, password string, db *sql.DB) bool {
-	sqlStatement := `INSERT INTO clients (name, email, passowrd) VALUES ( $1, $2,$3);`
+func registerUser(name string, email string, password string, db *sql.DB) int {
+	sqlStatement := `INSERT INTO clients (name, email, password) VALUES ($1,$2,$3);`
 	fmt.Println("[RegisterUser] Saving user data ..")
 	_, err := db.Exec(sqlStatement, name, email, password)
 	if err != nil {
 		log.Println(err)
+		return -1
 	} else {
 		fmt.Println("[RegisterUser] Success")
+		return loginUser(name, password, db)
 	}
 
-	return true
 }
-func loginUser(name string, password string, db *sql.DB) bool {
-	sqlStatement := `SELECT * FROM clients WHERE email=$1 and passowrd=$2;`
+func loginUser(name string, password string, db *sql.DB) int {
+	sqlStatement := `SELECT * FROM clients WHERE email=$1 and password=$2;`
 
 	var clientID int
 	var clientName, clientEmail, clientPassword string
@@ -75,15 +76,15 @@ func loginUser(name string, password string, db *sql.DB) bool {
 	row := db.QueryRow(sqlStatement, name, password)
 	switch err := row.Scan(&clientID, &clientName, &clientEmail, &clientPassword); err {
 	case sql.ErrNoRows:
-		return false
+		return -1
 	case nil:
-		return true
+		return clientID
 	default:
-		panic(err)
+		fmt.Println(err)
+		return -1
 
 	}
 }
-
 func getOnlineSlaves(BeatStamps []time.Time) []int {
 	onlineSlaves := make([]int, 0)
 
@@ -133,16 +134,39 @@ func connectDB() *sql.DB {
 
 //======================= Common Functions ==================
 
+// ExecuteQuery A function to execute queries that don't return any rows
+func ExecuteQuery(db *sql.DB, sqlStatement string) bool {
+	_, err := db.Exec(sqlStatement)
+
+	return (err == nil)
+}
+
+// Migrate A function to perform the DB migration
+func Migrate(db *sql.DB) {
+	migrationStatement := `
+	DROP TABLE clients;
+	CREATE TABLE clients (
+	id SERIAL PRIMARY KEY,
+	email  varchar(60) UNIQUE,
+	password  varchar(60) NOT NULL,
+	name varchar(60) NOT NULL
+	);
+	
+	`
+	ExecuteQuery(db, migrationStatement)
+}
+
 //ListenToClientReq :
 func ListenToClientReq(InsertionsStack [][]string, BeatStamp []time.Time, slaveIPs []string, clientIP string) {
 	db := connectDB()
 	defer db.Close()
-
+	Migrate(db)
 	clientSubscriber := initSubscriber(clientIP + "9092")
 
 	defer clientSubscriber.Close()
 
 	clientPublisher := initPublisher(clientIP + "8092")
+	idPub := initPublisher("tcp://127.0.0.1:8093")
 
 	defer clientPublisher.Close()
 
@@ -172,7 +196,14 @@ func ListenToClientReq(InsertionsStack [][]string, BeatStamp []time.Time, slaveI
 		if strings.Compare(commandType, "REGISTER") == 0 {
 			fmt.Println("[ClientSubscriber] Sending Command Data to DB Execution Layer")
 			name, email, password := commandDataDeseralizer(commandData)
-			registerUser(name, email, password, db)
+			id := registerUser(name, email, password, db)
+			if id > 0 {
+				idPub.Send(strconv.Itoa(id), 0)
+				fmt.Println("[ReadQueryListner] access granted ")
+			} else {
+				idPub.Send("-1", 0)
+				fmt.Println("[ReadQueryListner] access denied")
+			}
 			fmt.Println("[ClientSubscriber] Adding InsertionQuery to all slaves :", commandData)
 
 			for i := range InsertionsStack {

@@ -23,8 +23,17 @@ func initPublisher(addr string) *zmq4.Socket {
 	return publisher
 }
 
+func initSubscriber(addr string) *zmq4.Socket {
+	subscriber, _ := zmq4.NewSocket(zmq4.SUB)
+	subscriber.SetLinger(0)
+
+	subscriber.Connect(addr)
+	subscriber.SetSubscribe("")
+	return subscriber
+}
+
 //AssignedSlaveListner :
-func AssignedSlaveListner(command *string) {
+func AssignedSlaveListner(command *string, clientID *string) {
 	subscriber, _ := zmq4.NewSocket(zmq4.SUB)
 	subscriber.SetLinger(0)
 	defer subscriber.Close()
@@ -35,6 +44,9 @@ func AssignedSlaveListner(command *string) {
 
 	subscriber.Connect("tcp://127.0.0.1:8092")
 	subscriber.SetSubscribe("")
+
+	idSub := initSubscriber("tcp://127.0.0.1:8093")
+
 	for {
 		s, err := subscriber.Recv(0)
 		if err != nil {
@@ -43,24 +55,38 @@ func AssignedSlaveListner(command *string) {
 		}
 		fmt.Println("[AssignedSlaveListner] Recieved Slave info : " + s)
 
+		fmt.Println("[AssignedSlaveListner] Sending Query to Assigned Slave : " + *command)
+
 		sID, _ := strconv.ParseInt(s, 10, 64)
 
 		slavelist[sID-1].Send(*command, 0)
-		fmt.Println("[AssignedSlaveListner] Sending Query to Assigned Slave")
+
+		*clientID, err = idSub.Recv(0)
+		if err == nil {
+			fmt.Println("[AssignedSlaveListner] Recieved ID = " + *clientID)
+		}
 
 	}
 }
 
-func main() {
+func getClientID() {
+
 	command := ""
+	clientID := ""
 	publisher := initPublisher("tcp://127.0.0.1:9092")
+	idSub := initSubscriber("tcp://127.0.0.1:8093")
 
 	defer publisher.Close()
 
-	go AssignedSlaveListner(&command)
+	go AssignedSlaveListner(&command, &clientID)
 	reader := bufio.NewReader(os.Stdin)
 
-	for range time.Tick(time.Second) {
+	for {
+		fmt.Println("Your ID : " + clientID)
+		if clientID != "" && clientID != "-1" {
+			break
+		}
+
 		fmt.Print("LOGIN/REGISTER?(L/R)")
 		command, _ = reader.ReadString('\n')
 		if strings.Compare(command, "R\n") == 0 {
@@ -72,8 +98,15 @@ func main() {
 			fmt.Print("password :")
 			password, _ := reader.ReadString('\n')
 
+			name = strings.Replace(name, "\n", "", -1)
+			email = strings.Replace(email, "\n", "", -1)
+			password = strings.Replace(password, "\n", "", -1)
+			command = "REGISTER:" + name + ";" + email + ";" + password
 			publisher.Send("REGISTER:"+name+";"+email+";"+password, 0)
 			fmt.Println("[MainThread]", "REGISTER:"+name+";"+email+";"+password)
+			clientID, _ = idSub.Recv(0)
+			fmt.Println("[MainThread] Recieved ID = " + clientID)
+			time.Sleep(1 * time.Second)
 
 		} else {
 			fmt.Println("ENTER LOGIN USER INFORMATION")
@@ -82,9 +115,19 @@ func main() {
 			fmt.Print("password :")
 			password, _ := reader.ReadString('\n')
 
+			email = strings.Replace(email, "\n", "", -1)
+			password = strings.Replace(password, "\n", "", -1)
+			command = "LOGIN:" + email + ";" + password
 			publisher.Send("LOGIN:"+email+";"+password, 0)
 			fmt.Println("[MainThread]", "LOGIN:"+email+";"+password)
+			time.Sleep(1 * time.Second)
+
 		}
 
 	}
+
+}
+
+func main() {
+	getClientID()
 }
