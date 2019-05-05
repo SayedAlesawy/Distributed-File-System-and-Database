@@ -133,7 +133,7 @@ func ReadQueryListner(status *string, db *sql.DB, id int) {
 			idPub.Send(strconv.Itoa(id), 0)
 			fmt.Println("[ReadQueryListner] access granted ")
 		} else {
-			idPub.Send("-1", 0)
+			idPub.Send("-15", 0)
 			fmt.Println("[ReadQueryListner] access denied")
 		}
 

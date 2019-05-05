@@ -74,7 +74,6 @@ func getClientID() {
 	command := ""
 	clientID := ""
 	publisher := initPublisher("tcp://127.0.0.1:9092")
-	idSub := initSubscriber("tcp://127.0.0.1:8093")
 
 	defer publisher.Close()
 
@@ -83,7 +82,7 @@ func getClientID() {
 
 	for {
 		fmt.Println("Your ID : " + clientID)
-		if clientID != "" && clientID != "-1" {
+		if clientID != "" && clientID != "-15" {
 			break
 		}
 
@@ -104,9 +103,6 @@ func getClientID() {
 			command = "REGISTER:" + name + ";" + email + ";" + password
 			publisher.Send("REGISTER:"+name+";"+email+";"+password, 0)
 			fmt.Println("[MainThread]", "REGISTER:"+name+";"+email+";"+password)
-			clientID, _ = idSub.Recv(0)
-			fmt.Println("[MainThread] Recieved ID = " + clientID)
-			time.Sleep(1 * time.Second)
 
 		} else {
 			fmt.Println("ENTER LOGIN USER INFORMATION")

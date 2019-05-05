@@ -166,7 +166,6 @@ func ListenToClientReq(InsertionsStack [][]string, BeatStamp []time.Time, slaveI
 	defer clientSubscriber.Close()
 
 	clientPublisher := initPublisher(clientIP + "8092")
-	idPub := initPublisher("tcp://127.0.0.1:8093")
 
 	defer clientPublisher.Close()
 
@@ -196,14 +195,8 @@ func ListenToClientReq(InsertionsStack [][]string, BeatStamp []time.Time, slaveI
 		if strings.Compare(commandType, "REGISTER") == 0 {
 			fmt.Println("[ClientSubscriber] Sending Command Data to DB Execution Layer")
 			name, email, password := commandDataDeseralizer(commandData)
-			id := registerUser(name, email, password, db)
-			if id > 0 {
-				idPub.Send(strconv.Itoa(id), 0)
-				fmt.Println("[ReadQueryListner] access granted ")
-			} else {
-				idPub.Send("-1", 0)
-				fmt.Println("[ReadQueryListner] access denied")
-			}
+			registerUser(name, email, password, db)
+
 			fmt.Println("[ClientSubscriber] Adding InsertionQuery to all slaves :", commandData)
 
 			for i := range InsertionsStack {
