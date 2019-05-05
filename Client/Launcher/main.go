@@ -17,7 +17,7 @@ func main() {
 
 	//Client data
 	clientIP := constants.ClientIP
-	clientID, _ := strconv.Atoi(os.Args[1])
+	clientID, _ := strconv.Atoi(client.GetClientID()) //strconv.Atoi(os.Args[1])
 	clientPort := os.Args[2]
 	clientNotifyPort := os.Args[2] + "7"
 

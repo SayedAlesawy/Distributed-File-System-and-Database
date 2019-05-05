@@ -12,3 +12,6 @@
 *.out
 *.env
 .vscode
+*.mkv
+Distributed-File-System/DataNode/Launcher/Client*
+*.mp4
