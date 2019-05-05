@@ -69,7 +69,7 @@ func AssignedSlaveListner(command *string, clientID *string) {
 	}
 }
 
-func getClientID() {
+func getClientID() string {
 
 	command := ""
 	clientID := ""
@@ -83,7 +83,7 @@ func getClientID() {
 	for {
 		fmt.Println("Your ID : " + clientID)
 		if clientID != "" && clientID != "-15" {
-			break
+			return clientID
 		}
 
 		fmt.Print("LOGIN/REGISTER?(L/R)")
