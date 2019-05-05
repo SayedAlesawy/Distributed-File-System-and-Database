@@ -33,7 +33,7 @@ func initSubscriber(addr string) *zmq4.Socket {
 }
 
 //AssignedSlaveListner :
-func AssignedSlaveListner(command *string, clientID *string) {
+func AssignedSlaveListner(command *string, clientID *string, clientIP string) {
 	subscriber, _ := zmq4.NewSocket(zmq4.SUB)
 	subscriber.SetLinger(0)
 	defer subscriber.Close()
@@ -42,10 +42,10 @@ func AssignedSlaveListner(command *string, clientID *string) {
 		slavelist[i] = initPublisher("tcp://127.0.0.1:600" + strconv.Itoa(i+1))
 	}
 
-	subscriber.Connect("tcp://127.0.0.1:8092")
+	subscriber.Connect(clientIP + "8092")
 	subscriber.SetSubscribe("")
 
-	idSub := initSubscriber("tcp://127.0.0.1:8093")
+	idSub := initSubscriber(clientIP + "8093")
 
 	for {
 		s, err := subscriber.Recv(0)
@@ -71,13 +71,15 @@ func AssignedSlaveListner(command *string, clientID *string) {
 
 func getClientID() string {
 
+	trackerIP := "tcp://127.0.0.1:"
+	clientIP := "tcp://127.0.0.1:"
 	command := ""
 	clientID := ""
-	publisher := initPublisher("tcp://127.0.0.1:9092")
+	publisher := initPublisher(trackerIP + "9092")
 
 	defer publisher.Close()
 
-	go AssignedSlaveListner(&command, &clientID)
+	go AssignedSlaveListner(&command, &clientID, clientIP)
 	reader := bufio.NewReader(os.Stdin)
 
 	for {

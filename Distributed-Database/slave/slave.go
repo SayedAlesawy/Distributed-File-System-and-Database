@@ -111,10 +111,10 @@ func connectDB() *sql.DB {
 //======================= Common Functions ==================
 
 //ReadQueryListner :
-func ReadQueryListner(status *string, db *sql.DB, id int) {
+func ReadQueryListner(status *string, db *sql.DB, id int, clientIP string) {
 
-	subscriber := initSubscriber("tcp://127.0.0.1:600" + strconv.Itoa(id))
-	idPub := initPublisher("tcp://127.0.0.1:8093")
+	subscriber := initSubscriber(clientIP + "600" + strconv.Itoa(id))
+	idPub := initPublisher(clientIP + "8093")
 	defer subscriber.Close()
 
 	for {
@@ -141,8 +141,8 @@ func ReadQueryListner(status *string, db *sql.DB, id int) {
 }
 
 //TrackerUpdateListner :
-func TrackerUpdateListner(status *string, db *sql.DB, id int) {
-	subscriber := initSubscriber("tcp://127.0.0.1:500" + strconv.Itoa(id))
+func TrackerUpdateListner(status *string, db *sql.DB, id int, trackerIP string) {
+	subscriber := initSubscriber(trackerIP + "500" + strconv.Itoa(id))
 	defer subscriber.Close()
 
 	for {
@@ -159,27 +159,30 @@ func TrackerUpdateListner(status *string, db *sql.DB, id int) {
 }
 
 //HeartBeatPublisher :
-func HeartBeatPublisher(status *string, id int) {
-	publisher := initPublisher("tcp://127.0.0.1:300" + strconv.Itoa(id))
+func HeartBeatPublisher(id int, trackerIP string) {
+	publisher := initPublisher(trackerIP + "300" + strconv.Itoa(id))
 
 	defer publisher.Close()
 
-	publisher.Bind("tcp://127.0.0.1:300" + strconv.Itoa(id))
+	publisher.Bind(trackerIP + "300" + strconv.Itoa(id))
 
 	for range time.Tick(time.Second * 2) {
 		publisher.Send("Heartbeat", 0)
-		log.Println("send", "Heartbeat:"+*status)
+		log.Println("send", "Heartbeat:")
 	}
 }
 
 func main() {
+	clientIP := "tcp://127.0.0.1:"
+	trackerIP := "tcp://127.0.0.1:"
+
 	db := connectDB()
 	defer db.Close()
 	status := "Avaliable"
 	id := 2
-	go HeartBeatPublisher(&status, id+1)
-	go TrackerUpdateListner(&status, db, id+1)
-	go ReadQueryListner(&status, db, id+1)
+	go HeartBeatPublisher(id+1, trackerIP)
+	go TrackerUpdateListner(&status, db, id+1, trackerIP)
+	go ReadQueryListner(&status, db, id+1, clientIP)
 	for {
 
 	}
