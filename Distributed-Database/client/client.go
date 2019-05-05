@@ -33,21 +33,32 @@ func initSubscriber(addr string) *zmq4.Socket {
 }
 
 //AssignedSlaveListner :
-func AssignedSlaveListner(command *string, clientID *string, clientIP string) {
+func AssignedSlaveListner(command *string, clientID *string, trackerIP string) {
 	subscriber, _ := zmq4.NewSocket(zmq4.SUB)
 	subscriber.SetLinger(0)
 	defer subscriber.Close()
 	slavelist := make([]*zmq4.Socket, 3)
-	for i := range slavelist {
-		slavelist[i] = initPublisher("tcp://127.0.0.1:600" + strconv.Itoa(i+1))
-	}
+	idSubs := make([]*zmq4.Socket, 3)
+	//for i := range slavelist {
+	//	slavelist[i] = initPublisher("tcp://127.0.0.1:600" + strconv.Itoa(i+1))
+	//}
+	slavelist[0] = initPublisher("tcp://127.0.0.1:600" + strconv.Itoa(0+1))
+	slavelist[1] = initPublisher("tcp://127.0.0.1:600" + strconv.Itoa(1+1))
+	slavelist[2] = initPublisher("tcp://127.0.0.1:600" + strconv.Itoa(2+1))
 
-	subscriber.Connect(clientIP + "8092")
+	idSubs[0] = initSubscriber("tcp://127.0.0.1:8093")
+	idSubs[1] = initSubscriber("tcp://127.0.0.1:8093")
+	idSubs[2] = initSubscriber("tcp://127.0.0.1:8093")
+
+	subscriber.Connect(trackerIP + "8092")
 	subscriber.SetSubscribe("")
 
-	idSub := initSubscriber(clientIP + "8093")
+	//idSub := initSubscriber("tcp://127.0.0.1:8093")
 
 	for {
+		if strings.Split(*command, ":")[0] != "LOGIN" {
+			continue
+		}
 		s, err := subscriber.Recv(0)
 		if err != nil {
 			log.Println(err)
@@ -61,10 +72,11 @@ func AssignedSlaveListner(command *string, clientID *string, clientIP string) {
 
 		slavelist[sID-1].Send(*command, 0)
 
-		*clientID, err = idSub.Recv(0)
+		*clientID, err = idSubs[sID-1].Recv(0)
 		if err == nil {
 			fmt.Println("[AssignedSlaveListner] Recieved ID = " + *clientID)
 		}
+		//*command = ""
 
 	}
 }
@@ -72,14 +84,13 @@ func AssignedSlaveListner(command *string, clientID *string, clientIP string) {
 func getClientID() string {
 
 	trackerIP := "tcp://127.0.0.1:"
-	clientIP := "tcp://127.0.0.1:"
 	command := ""
 	clientID := ""
 	publisher := initPublisher(trackerIP + "9092")
 
 	defer publisher.Close()
 
-	go AssignedSlaveListner(&command, &clientID, clientIP)
+	go AssignedSlaveListner(&command, &clientID, trackerIP)
 	reader := bufio.NewReader(os.Stdin)
 
 	for {

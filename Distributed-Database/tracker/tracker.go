@@ -157,15 +157,15 @@ func Migrate(db *sql.DB) {
 }
 
 //ListenToClientReq :
-func ListenToClientReq(InsertionsStack [][]string, BeatStamp []time.Time, slaveIPs []string, clientIP string) {
+func ListenToClientReq(InsertionsStack [][]string, BeatStamp []time.Time, slaveIPs []string, trackerIP string) {
 	db := connectDB()
 	defer db.Close()
 	Migrate(db)
-	clientSubscriber := initSubscriber(clientIP + "9092")
+	clientSubscriber := initSubscriber(trackerIP + "9092")
 
 	defer clientSubscriber.Close()
 
-	clientPublisher := initPublisher(clientIP + "8092")
+	clientPublisher := initPublisher(trackerIP + "8092")
 
 	defer clientPublisher.Close()
 
@@ -253,16 +253,18 @@ func main() {
 	InsertionsStack := make([][]string, 3)
 	BeatStamp := make([]time.Time, 3)
 	slaves := make([]string, 3)
-	clientIP := "tcp://127.0.0.1:"
+	//clientIP := "tcp://127.0.0.1:"
+	trackerIP := "tcp://127.0.0.1:"
 	fmt.Println()
-	for i := range slaves {
-		slaves[i] = "tcp://127.0.0.1:"
-	}
+
+	slaves[0] = "tcp://127.0.0.1:"
+	slaves[1] = "tcp://127.0.0.1:"
+	slaves[2] = "tcp://127.0.0.1:"
 
 	for i := range InsertionsStack {
 		InsertionsStack[i] = make([]string, 0)
 	}
-	go ListenToClientReq(InsertionsStack, BeatStamp, slaves, clientIP)
+	go ListenToClientReq(InsertionsStack, BeatStamp, slaves, trackerIP)
 	for i := range slaves {
 		go ListenToHeartBeat(InsertionsStack, i, BeatStamp, slaves[i])
 	}
