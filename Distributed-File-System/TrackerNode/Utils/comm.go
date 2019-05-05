@@ -153,5 +153,5 @@ func (trackerNodeObj *trackerNode) recieveReplicationCompletion() bool {
 	logger.LogFail(status, LogSignTR, trackerNodeObj.id, "recieveReplicationCompletion(): Failed to receive replication completion")
 	logger.LogSuccess(status, LogSignTR, trackerNodeObj.id, "Recieved "+msg)
 
-	return status
+	return (msg == "Replication Finished")
 }

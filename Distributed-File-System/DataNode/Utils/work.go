@@ -4,9 +4,9 @@ import (
 	comm "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Comm"
 	logger "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Log"
 	request "Distributed-Video-Processing-Cluster/Distributed-File-System/Utils/Request"
-	"log"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/pebbe/zmq4"
 )
@@ -57,6 +57,10 @@ func (datanodeObj *dataNode) uploadRequestHandler(req request.UploadRequest) {
 	logger.LogMsg(LogSignDN, datanodeObj.id, "Upload Request Handler Started")
 
 	fileSize := datanodeObj.receiveData(req.FileName, req.ClientIP, req.ClientPort, req.ClientID, 1)
+	if fileSize == 0 {
+		return
+	}
+
 	location := strconv.Itoa(datanodeObj.id)
 
 	compReq := request.CompletionRequest{
@@ -69,26 +73,57 @@ func (datanodeObj *dataNode) uploadRequestHandler(req request.UploadRequest) {
 		Location:   location,
 	}
 
-	datanodeObj.sendCompletionNotifcation(compReq)
+	status := datanodeObj.sendCompletionNotifcation(compReq)
+	if status == false {
+		return
+	}
 }
 
 func (datanodeObj *dataNode) downloadRequestHandler(req request.UploadRequest, start int, chunksCount int) {
 	logger.LogMsg(LogSignDN, datanodeObj.id, "Download Request Handler Started")
-	datanodeObj.sendPieces(req, start, chunksCount, req.ClientID)
+
+	sendStatus := datanodeObj.sendPieces(req, start, chunksCount, req.ClientID)
+	if sendStatus == false {
+		return
+	}
 }
 
 func (datanodeObj *dataNode) replicationRequestHandler(req request.ReplicationRequest) {
 	logger.LogMsg(LogSignDN, datanodeObj.id, "Replication Request Handler Started")
 
 	if req.SourceID == datanodeObj.id {
-		log.Println("I am source")
-		datanodeObj.sendReplicationRequest(req)
-		datanodeObj.sendData(req.FileName, req.TargetNodeID, req.TargetNodeIP, req.TargetNodeBasePort+"24", req.ClientID)
-		datanodeObj.notifyReplicationCompletion(req.TrackerPort)
+		logger.LogMsg(LogSignDN, datanodeObj.id, "Replication Source")
+
+		sendRPQStatus := datanodeObj.sendReplicationRequest(req)
+		if sendRPQStatus == false {
+			return
+		}
+
+		sendDataStatus := datanodeObj.sendData(req.FileName, req.TargetNodeID, req.TargetNodeIP, req.TargetNodeBasePort+"24", req.ClientID)
+		if sendDataStatus == false {
+			logger.LogMsg(LogSignDN, datanodeObj.id, "Replication Failed")
+
+			notifyStatus := datanodeObj.notifyReplicationCompletion(req.TrackerPort, "Replication Failed")
+			time.Sleep(5 * time.Second)
+			if notifyStatus == false {
+				return
+			}
+
+			return
+		}
+
+		notifyStatus := datanodeObj.notifyReplicationCompletion(req.TrackerPort, "Replication Finished")
+		if notifyStatus == false {
+			return
+		}
 
 	} else if req.TargetNodeID == datanodeObj.id {
-		log.Println("I am dest")
-		datanodeObj.receiveData(req.FileName, datanodeObj.ip, datanodeObj.repUpPort, req.ClientID, 2)
+		logger.LogMsg(LogSignDN, datanodeObj.id, "Replication Destination")
+
+		recvStatus := datanodeObj.receiveData(req.FileName, datanodeObj.ip, datanodeObj.repUpPort, req.ClientID, 2)
+		if recvStatus == 0 {
+			return
+		}
 
 	} else {
 		logger.LogMsg(LogSignDN, datanodeObj.id, "Malformed replication request")

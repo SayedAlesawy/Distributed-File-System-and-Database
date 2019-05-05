@@ -209,7 +209,7 @@ func (clientObj *client) receiveChunk(socket *zmq4.Socket, chunkID int) ([]byte,
 	case <-recvChan:
 	case <-time.After(time.Minute):
 		logger.LogMsg(LogSign, clientObj.id, "Receiving chunk from DataNode timedout after 1 min")
-		return nil, false
+		return []byte{}, false
 	}
 
 	logger.LogFail(status, LogSign, clientObj.id, fmt.Sprintf("receiveChunk(): Error receiving chunk #%d", chunkID))
