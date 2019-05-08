@@ -1,7 +1,19 @@
 # **Distributed File System**
 The main objective of the File System is to offer a platform for data storage, that's **distributed** on multiple machines, **highly available**, **reliable** and **fault tolerant**. 
 
-## **System components**
+## **Table of Contents**
+- [**System Components**](#system-components)
+    * [**Tracker Node**](#tracker-node)
+    * [**Data Keeper Node**](#data-keeper-node)
+- [**Data Replication Mechanism**](#data-replication-mechanism)
+- [**Types of Requests**](#types-of-requests)
+- [**Request Handling**](#request-handling)
+    * [**Upload Request Handler**](#upload-request-handler)
+    * [**Download Request Handler**](#download-request-handler)
+    * [**Display Request Handler**](#display-request-handler)
+- [**Fault Tolerance**](#fault-tolerance)
+
+## **System Components**
 The system consists of 2 types of **Nodes**, namely, the **Tracker Node** and the **Data Keeper Node**.
 
 - ### **Tracker Node**
@@ -39,7 +51,7 @@ The system supports 3 types of requests:
 
 ## **Request Handling**
 The system handles the 3 formerly mentioned types of requests in the following fashion:
-- **Upload Request Handler**
+- ### **Upload Request Handler**
 
     The upload request handler works as follows:
     - The authenticated user sends an upload request to the Tracker Node.
@@ -54,7 +66,7 @@ The system handles the 3 formerly mentioned types of requests in the following f
     - The process of upload request handling is completely multi-threaded. A single Data Keeper Node can handle virtually infinite number of upload requests (only bounded by the network capacity) at the same time, but the performance tends to suffer when the number of requests being served is high.
     - The data upload is done on chunk basis, so if the connection was interrupted, the receiving can still resume from the point it has left off.
 
-- **Download Request Handler**  
+- ### **Download Request Handler**  
 
     The download request handler works as follows:
     - The authenticated user sends a download request to the Tracker Node.
@@ -71,7 +83,7 @@ The system handles the 3 formerly mentioned types of requests in the following f
     - The file assembly process is done offline, so if the user was disconnected, the assembly would still work. 
     - The download process is no longer limited by the server's capacity, because the download is taking place form multiple different servers simultaneously. So the only bottleneck becomes the user's network capacity.
 
-- **Display Request Handler**
+- ### **Display Request Handler**
 
     The display request handler works as follows:
     - The authenticated user sends a display request to the Tracker Node.
