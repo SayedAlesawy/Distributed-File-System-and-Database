@@ -1,5 +1,5 @@
 # **Distributed File System**
-The main objective of the File System is to offer a platform for data storage, that's **distributed** on multiple machines, **highly available**, **reliable** and **fault tolerant**. 
+The main objective of the File System is to offer a platform for data storage, that's [**distributed**](#system-components) on multiple machines, [**highly available**](data-replication-mechanism), [**reliable**](data-replication-mechanism) and [**fault tolerant**](#fault-tolerance). 
 
 ## **Table of Contents**
 - [**System Components**](#system-components)
@@ -12,6 +12,7 @@ The main objective of the File System is to offer a platform for data storage, t
     * [**Download Request Handler**](#download-request-handler)
     * [**Display Request Handler**](#display-request-handler)
 - [**Fault Tolerance**](#fault-tolerance)
+- [**System Testing**](system-testing)
 
 ## **System Components**
 The system consists of 2 types of **Nodes**, namely, the **Tracker Node** and the **Data Keeper Node**.
@@ -104,3 +105,6 @@ The system identifies these types of faults by running blocking functions (send/
 The system is also able to identify other types of errors such as:
 - Wrong file names in upload requests.
 - Unauthorized access of files.
+
+## **System Testing**
+The system has been tested in a distributed configuration (1 Tracker Node and 3-4 Data Keeper Nodes) under all types of supported requests.
