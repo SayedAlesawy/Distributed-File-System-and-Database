@@ -12,7 +12,7 @@ The main objective of the File System is to offer a platform for data storage, t
     * [**Download Request Handler**](#download-request-handler)
     * [**Display Request Handler**](#display-request-handler)
 - [**Fault Tolerance**](#fault-tolerance)
-- [**System Testing**](system-testing)
+- [**System Testing**](#system-testing)
 
 ## **System Components**
 The system consists of 2 types of **Nodes**, namely, the **Tracker Node** and the **Data Keeper Node**.
