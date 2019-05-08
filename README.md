@@ -1,5 +1,5 @@
 # **Distributed File System**
-The main objective of the File System is to offer a platform for data storage, that's [**distributed**](#system-components) on multiple machines, [**highly available**](data-replication-mechanism), [**reliable**](data-replication-mechanism) and [**fault tolerant**](#fault-tolerance). 
+The main objective of the File System is to offer a platform for data storage, that's [**distributed**](#system-components) on multiple machines, [**highly available**](#data-replication-mechanism), [**reliable**](#data-replication-mechanism) and [**fault tolerant**](#fault-tolerance). 
 
 ## **Table of Contents**
 - [**System Components**](#system-components)
