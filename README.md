@@ -3,14 +3,14 @@ The main objective of the File System is to offer a platform for data storage, t
 
 ## **Table of Contents**
 - [**System Components**](#system-components)
-    * [**Tracker Node**](#tracker-node)
-    * [**Data Keeper Node**](#data-keeper-node)
+    * [Tracker Node](#tracker-node)
+    * [Data Keeper Node](#data-keeper-node)
 - [**Data Replication Mechanism**](#data-replication-mechanism)
 - [**Types of Requests**](#types-of-requests)
 - [**Request Handling**](#request-handling)
-    * [**Upload Request Handler**](#upload-request-handler)
-    * [**Download Request Handler**](#download-request-handler)
-    * [**Display Request Handler**](#display-request-handler)
+    * [Upload Request Handler](#upload-request-handler)
+    * [Download Request Handler](#download-request-handler)
+    * [Display Request Handler](#display-request-handler)
 - [**Fault Tolerance**](#fault-tolerance)
 - [**System Testing**](#system-testing)
 
