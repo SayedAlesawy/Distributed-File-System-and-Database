@@ -43,6 +43,11 @@ The Replication is a periodic routine that initiated by the Tracker Node once ev
 - The source Data Keeper Node establishes communication with the destination Node and the file replication starts.
 - Once the replication is done, the source Data Keeper Node sends a completion confirmation to the Tracker Node so it can update its database.
 
+The Replication algorithm handles the following network errors:
+- If a file has been partially replicated (to 2 machines), and any of the two sources went offline, it chooses the other.
+- If all possible destinations are offline, no replicas are made.
+- If a replication was interrupted by network failure from either source or destination Data Keeper Nodes, the system recovers after a timeout and the replication is restarted.
+
 ## **Types of Requests**
 The system supports 3 types of requests:
 - An Upload request.
